@@ -1,22 +1,22 @@
 {
   "files": {
     "main.css": "/dag-3d/static/css/main.6c1c39d6.chunk.css",
-    "main.js": "/dag-3d/static/js/main.e0fa444d.chunk.js",
-    "main.js.map": "/dag-3d/static/js/main.e0fa444d.chunk.js.map",
-    "runtime-main.js": "/dag-3d/static/js/runtime-main.133193e9.js",
-    "runtime-main.js.map": "/dag-3d/static/js/runtime-main.133193e9.js.map",
-    "static/js/2.eb1a1aa8.chunk.js": "/dag-3d/static/js/2.eb1a1aa8.chunk.js",
-    "static/js/2.eb1a1aa8.chunk.js.map": "/dag-3d/static/js/2.eb1a1aa8.chunk.js.map",
+    "main.js": "/dag-3d/static/js/main.1442d0ab.chunk.js",
+    "main.js.map": "/dag-3d/static/js/main.1442d0ab.chunk.js.map",
+    "runtime-main.js": "/dag-3d/static/js/runtime-main.e79111ad.js",
+    "runtime-main.js.map": "/dag-3d/static/js/runtime-main.e79111ad.js.map",
+    "static/js/2.04c67f12.chunk.js": "/dag-3d/static/js/2.04c67f12.chunk.js",
+    "static/js/2.04c67f12.chunk.js.map": "/dag-3d/static/js/2.04c67f12.chunk.js.map",
     "index.html": "/dag-3d/index.html",
-    "precache-manifest.d8c420c57bdfbf35d1a0bbbc99899f4e.js": "/dag-3d/precache-manifest.d8c420c57bdfbf35d1a0bbbc99899f4e.js",
+    "precache-manifest.4b4c7393a39227cea040d1cc60637a39.js": "/dag-3d/precache-manifest.4b4c7393a39227cea040d1cc60637a39.js",
     "service-worker.js": "/dag-3d/service-worker.js",
     "static/css/main.6c1c39d6.chunk.css.map": "/dag-3d/static/css/main.6c1c39d6.chunk.css.map",
-    "static/js/2.eb1a1aa8.chunk.js.LICENSE": "/dag-3d/static/js/2.eb1a1aa8.chunk.js.LICENSE"
+    "static/js/2.04c67f12.chunk.js.LICENSE": "/dag-3d/static/js/2.04c67f12.chunk.js.LICENSE"
   },
   "entrypoints": [
-    "static/js/runtime-main.133193e9.js",
-    "static/js/2.eb1a1aa8.chunk.js",
+    "static/js/runtime-main.e79111ad.js",
+    "static/js/2.04c67f12.chunk.js",
     "static/css/main.6c1c39d6.chunk.css",
-    "static/js/main.e0fa444d.chunk.js"
+    "static/js/main.1442d0ab.chunk.js"
   ]
 }
