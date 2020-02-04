@@ -1,15 +1,14 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
-import Stuff from "./graph"
+import { DemoGraph } from "./demo-graph"
 
 const App: React.FC = () => {
   return (
     <div className="App">
       <header className="App-header">
-        DAG Component
+        DAG 3D Component
       </header>
-      <Stuff />
+      <DemoGraph />
     </div>
   );
 }
