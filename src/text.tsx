@@ -1,5 +1,5 @@
-import React, { forwardRef, Ref, useMemo } from 'react';
-import { ReactThreeFiber, useThree } from 'react-three-fiber';
+import React, { forwardRef, Ref, useCallback, useMemo } from 'react';
+import { ReactThreeFiber } from 'react-three-fiber';
 import { Mesh } from 'three';
 
 export type MeshProps = ReactThreeFiber.Object3DNode<Mesh, typeof Mesh>;
@@ -7,15 +7,16 @@ export type MeshProps = ReactThreeFiber.Object3DNode<Mesh, typeof Mesh>;
 export interface TextProps {
     width?: number;
     height?: number;
-    text?: string;
+    text: string;
     depth?: number;
     backgroundColor?: string;
     color?: string;
     position: number[];
+    onClick: (args: { text: string }) => void;
 }
 
 
-export const Text = forwardRef(({ width, height, text, backgroundColor, color, depth, ...props }: TextProps, ref: Ref<MeshProps>) => {
+export const Text = forwardRef(({ width, height, text, backgroundColor, color, depth, onClick, ...props }: TextProps, ref: Ref<MeshProps>) => {
     const _width = width || 1
     const _height = height || 0.3
     const _text = text || '<null>'
@@ -34,7 +35,7 @@ export const Text = forwardRef(({ width, height, text, backgroundColor, color, d
         context.scale(20, 20)
         context.fillStyle = backgroundColor || 'grey'
         context.fillRect(0, 0, textureWidth, textureHeight)
-        const fontSize = textureHeight / 1.5;
+        const fontSize = textureHeight / 1.8;
         context.font = `bold ${fontSize}px Arial, sans-serif`
         context.fillStyle = color || 'white'
         context.textAlign = 'center'
@@ -43,16 +44,19 @@ export const Text = forwardRef(({ width, height, text, backgroundColor, color, d
         const y = textureHeight / 2
         context.fillText(_text, x, y)
         return canvas
-    }, [width, height, color, backgroundColor, text])
+    }, [_width, _height, color, backgroundColor, _text])
+    const _onClick = useCallback((e: any) => {
+        onClick({ text })
+    }, [text, onClick])
 
-    const { viewport } = useThree()
+    // const { viewport } = useThree()
     return (
-        <mesh ref={ref} {...props}>
+        <mesh ref={ref} onClick={_onClick} {...props}>
             <boxBufferGeometry args={[_width, _height, depth || 0.06]} attach="geometry" />
-            <meshStandardMaterial attachArray="material" color="grey" />
-            <meshStandardMaterial attachArray="material" color="grey" />
-            <meshStandardMaterial attachArray="material" color="grey" />
-            <meshStandardMaterial attachArray="material" color="grey" />
+            <meshStandardMaterial attachArray="material" color={backgroundColor} />
+            <meshStandardMaterial attachArray="material" color={backgroundColor} />
+            <meshStandardMaterial attachArray="material" color={backgroundColor} />
+            <meshStandardMaterial attachArray="material" color={backgroundColor} />
 
             <meshStandardMaterial attachArray="material">
                 <canvasTexture attach="map" image={textCanvas} />

@@ -1,9 +1,9 @@
 import { graphlib, layout } from "dagre"
-import React, { FC, useMemo } from 'react'
+import React, { FC, useCallback, useMemo, useState } from 'react'
 import { useThree } from 'react-three-fiber'
 import { CatmullRomCurve3, Vector3 } from "three"
-import { CameraRig, useSelectedNode } from "./camera-rig"
-import { Text } from "./text"
+import { CameraRig } from "./camera-rig"
+import { SpinText } from "./spin-text"
 
 interface Node {
 	name: string;
@@ -53,7 +53,7 @@ export function useDag(nodes: Node[], edges: Edge[], direction = "LR"): Layout {
 		const height = retnodes.reduce((p, c) => [Math.min(c.y, p[0]), Math.max(c.y + c.height, p[1])], [0, 0]) as [number, number]
 		const retedges = g.edges().map(e => ({ points: g.edge(e).points }));
 		return { nodes: retnodes, width, height, edges: retedges }
-	}, [nodes, edges])
+	}, [nodes, edges, direction])
 }
 
 // extend({ OrbitControls })
@@ -73,26 +73,32 @@ interface GraphProps {
 }
 
 export const Graph: FC<GraphProps> = ({ graph }) => {
-	const { viewport, size } = useThree();
-	const convertGraphX = (x: number) => (x - graph.width[0]) * (viewport.width) / (graph.width[1] - graph.width[0]) - viewport.width / 2
-	const convertGraphY = (y: number) => (y - graph.height[0]) * (viewport.height) / (graph.height[1] - graph.height[0]) - viewport.height / 2
-	const convertWidth = (width: number) => width * viewport.width / (graph.width[1] - graph.width[0])
-	const convertHeight = (height: number) => height * viewport.height / (graph.height[1] - graph.height[0])
-	const selectedNode = useSelectedNode(graph.nodes)
+	const { viewport } = useThree();
+	const convertGraphX = useCallback((x: number) => (x - graph.width[0]) * (viewport.width) / (graph.width[1] - graph.width[0]) - viewport.width / 2, [viewport, graph])
+	const convertGraphY = useCallback((y: number) => (y - graph.height[0]) * (viewport.height) / (graph.height[1] - graph.height[0]) - viewport.height / 2, [graph, viewport])
+	const convertWidth = useCallback((width: number) => width * viewport.width / (graph.width[1] - graph.width[0]), [viewport, graph])
+	const convertHeight = useCallback((height: number) => height * viewport.height / (graph.height[1] - graph.height[0]), [viewport, graph])
+	const [selectedNode, selectNode] = useState(0)
 	const points = useMemo(() => {
 		return graph.nodes.map(n => new Vector3(convertGraphX(n.x), convertGraphY(n.y), -0.1))
-	}, [graph])
-	console.log({ selectedNode })
+	}, [graph, convertGraphX, convertGraphY])
+	const onSelect = useCallback(({ text }: { text: string }) => {
+		const index = graph.nodes.findIndex(f => f.name === text);
+		if (index >= 0) selectNode(index);
+	}, [graph, selectNode])
 	return <>
-		<CameraRig points={points} />
+		<CameraRig targetPosition={points[selectedNode]} />
 		{
-			graph.nodes.map((n, i) => (<Text
+			graph.nodes.map((n, i) => (<SpinText
 				key={n.name + selectedNode}
+				onClick={onSelect}
 				text={n.name}
+				spinX={n.name === "Client" || n.name === "Config" ? 0.6 : 0}
 				color={i === selectedNode ? "black" : "white"}
 				width={convertWidth(n.width)}
 				height={convertHeight(n.height)}
-				depth={0.2}
+				backgroundColor="#4070f0"
+				depth={0.3}
 				position={[convertGraphX(n.x), convertGraphY(n.y), -0.1]} />))
 		}
 		{graph.edges.map(edge => {
@@ -102,7 +108,7 @@ export const Graph: FC<GraphProps> = ({ graph }) => {
 					attach="geometry"
 					args={[path, 30, 0.03, 8, false]}
 				/>
-				<meshPhongMaterial attach="material" color="grey" />
+				<meshPhongMaterial attach="material" color="#606010" />
 			</mesh>);
 		})}
 	</>

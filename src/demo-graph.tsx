@@ -4,8 +4,8 @@ import { Color } from "three"
 import { Graph, useDag } from "./graph"
 
 export const DemoGraph = () => {
-    const height = 6;
-    const width = 50;
+    const height = 8;
+    const width = 60;
     const vwapEngine = "VWAP Engine"
     const oms = "OMS"
     const market = "Exch Links"
@@ -40,8 +40,8 @@ export const DemoGraph = () => {
     return (
         <Canvas pixelRatio={window.devicePixelRatio}>
             <ambientLight />
-            <spotLight position={[10, -30, 10]} color={new Color("#4040ff")} rotation={[0.2, -0.2, 0]} />
-            <spotLight position={[-10, -30, 10]} color={new Color("#90ff90")} rotation={[0.2, 0.2, 0]} />
+            <spotLight position={[-7, 1, 3]} color={new Color("#fff")} intensity={0.8} rotation={[-0.2, 1.2, 0]} />
+            <spotLight position={[0, -5, 3]} color={new Color("#fff")} intensity={0.8} rotation={[1.2, 0, 0]} />
             <Graph graph={graph} />
         </Canvas>
     )
