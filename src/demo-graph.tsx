@@ -1,48 +1,65 @@
-import React from 'react'
+import React, { useState, useCallback } from 'react'
 import { Canvas } from 'react-three-fiber'
-import { Color } from "three"
-import { Graph, useDag } from "./graph"
+import { Color, Vector3 } from "three"
+import { Graph } from "./component/graph"
+import { useDag } from "./component/dagre-graph"
+import { useNgraph } from './component/nlayout-graph'
+
+const height = 8;
+const width = 60;
+
+const vwapEngine = "VWAP Engine"
+const oms = "OMS"
+const market = "Exch Links"
+const trading = "Trading Sys"
+const prices = "MD Sys"
+const client = "Client"
+const clientIn = "Client In"
+const clientOut = "Client Out"
+
+const nodes = [
+    { name: "Ref Data Svc", width: width, height: height },
+    { name: "EOD Prices", width, height },
+    { name: prices, width, height },
+    { name: clientIn, width, height },
+    { name: vwapEngine, width: width, height: height },
+    { name: oms, width: width, height: height },
+    { name: market, width, height },
+    { name: "Config", width, height },
+    { name: trading, width, height },
+    { name: clientOut, width, height }
+
+]
+
+const edges = [
+    { from: clientIn, to: oms, weight: 2 },
+    { from: "Ref Data Svc", to: vwapEngine },
+    { from: "Config", to: vwapEngine, messages: 1, weight: 2 },
+    { from: prices, to: vwapEngine, messages: 20, weight: 2 },
+    { from: "EOD Prices", to: vwapEngine, messages: 5 },
+    { from: "EOD Prices", to: trading, messages: 5 },
+    { from: vwapEngine, to: oms, weight: 2 },
+    { from: oms, to: vwapEngine },
+    { from: oms, to: market },
+    { from: oms, to: trading },
+    { from: market, to: oms, weight: 2 },
+    // { from: market, to: trading },
+    { from: trading, to: clientOut }
+]
 
 export const DemoGraph = () => {
-    const height = 8;
-    const width = 60;
-    const vwapEngine = "VWAP Engine"
-    const oms = "OMS"
-    const market = "Exch Links"
-    const trading = "Trading Sys"
-    const prices = "MD Sys"
-    const client = "Client"
-    const clientSys = "Client Int"
-    const graph = useDag([
-        { name: "Config", width, height },
-        { name: "Ref Data Svc", width, height },
-        { name: "EOD Prices", width, height },
-        { name: prices, width, height },
-        { name: client, width, height },
-        { name: clientSys, width, height },
-        { name: vwapEngine, width, height },
-        { name: oms, width, height },
-        { name: market, width, height },
-        { name: trading, width, height }
-    ], [
-        { from: "Config", to: vwapEngine },
-        { from: client, to: clientSys },
-        { from: clientSys, to: oms },
-        { from: "Ref Data Svc", to: vwapEngine },
-        { from: prices, to: vwapEngine },
-        { from: "EOD Prices", to: vwapEngine },
-        { from: vwapEngine, to: oms },
-        { from: oms, to: market },
-        { from: market, to: trading },
-        { from: trading, to: clientSys }
-    ],
-        "RL");
+    const [selectedNode, setNode] = useState<string | null>(null)
+    const graph = useNgraph(nodes, edges);
+    // const graph = useDag(nodes, edges, "RL");
+    const unselect = useCallback((p) => {
+        setNode(null);
+    }, [setNode])
     return (
-        <Canvas pixelRatio={window.devicePixelRatio}>
+        <Canvas pixelRatio={window.devicePixelRatio} onClickCapture={unselect}>
             <ambientLight />
-            <spotLight position={[-7, 1, 3]} color={new Color("#fff")} intensity={0.8} rotation={[-0.2, 1.2, 0]} />
-            <spotLight position={[0, -5, 3]} color={new Color("#fff")} intensity={0.8} rotation={[1.2, 0, 0]} />
-            <Graph graph={graph} />
-        </Canvas>
+            <spotLight position={[6, 2, 2]} color={new Color("#fff")} intensity={0.6} />
+            <spotLight position={[-6, 2, 2]} color={new Color("#fff")} intensity={0.6} />
+            <Graph graph={graph} selectedNode={selectedNode} onSelectNode={({ text }) => setNode(text)} />
+        </Canvas >
     )
 }
