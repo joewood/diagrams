@@ -13,7 +13,7 @@ export const SpinText: FC<SpinProps> = ({ spinX, spinY, ...props }) => {
         const c = ref.current;
         if (!!c) {
             const r = c.rotation as Euler;
-            r.set(clock.getElapsedTime() * (spinX || 0.0), clock.getElapsedTime() * (spinY || 0.0), 0);
+            r.set(clock.getElapsedTime() * (spinX || 0.0), clock.getElapsedTime() * (spinY || -0.0), 0);
         }
     })
     return <Text ref={ref} {...props} />

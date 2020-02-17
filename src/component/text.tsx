@@ -1,6 +1,6 @@
 import React, { forwardRef, Ref, useCallback, useMemo } from 'react';
 import { ReactThreeFiber } from 'react-three-fiber';
-import { ExtrudeBufferGeometry, ExtrudeGeometryOptions, Mesh, Shape, UVGenerator, Vector2 } from 'three';
+import { ExtrudeBufferGeometry, ExtrudeGeometryOptions, Mesh, Shape, UVGenerator, Vector2, LineCurve, LineCurve3 } from 'three';
 
 export type MeshProps = ReactThreeFiber.Object3DNode<Mesh, typeof Mesh>;
 
@@ -15,15 +15,16 @@ export interface TextProps {
     onClick: (args: { text: string }) => void;
 }
 
+const stepFunction = (v: number, neg = false) => neg ? (1 - (v / Math.abs(v) + 1) / 2) : ((v / Math.abs(v) + 1) / 2)
 
 const generateTopUV = (geometry: ExtrudeBufferGeometry, vertices: number[], indexA: number, indexB: number, indexC: number) => {
-    const cure = (j: number) => (j / Math.abs(j) + 1) / 2
-    var a_x = cure(vertices[indexA * 3]);
-    var a_y = cure(vertices[indexA * 3 + 1]);
-    var b_x = cure(vertices[indexB * 3]);
-    var b_y = cure(vertices[indexB * 3 + 1]);
-    var c_x = cure(vertices[indexC * 3]);
-    var c_y = cure(vertices[indexC * 3 + 1]);
+    const rear = vertices[indexA * 3 + 2] < 0
+    var a_x = stepFunction(vertices[indexA * 3], rear);
+    var a_y = stepFunction(vertices[indexA * 3 + 1], false);
+    var b_x = stepFunction(vertices[indexB * 3], rear);
+    var b_y = stepFunction(vertices[indexB * 3 + 1], false);
+    var c_x = stepFunction(vertices[indexC * 3], rear);
+    var c_y = stepFunction(vertices[indexC * 3 + 1], false);
     return [
         new Vector2(a_x, a_y),
         new Vector2(b_x, b_y),
@@ -33,31 +34,40 @@ const generateTopUV = (geometry: ExtrudeBufferGeometry, vertices: number[], inde
 }
 
 const generateSideWallUV = (geometry: ExtrudeBufferGeometry, vertices: number[], indexA: number, indexB: number, indexC: number, indexD: number) => {
-    var a_x = vertices[indexA * 3];
-    var a_y = vertices[indexA * 3 + 1];
-    var a_z = vertices[indexA * 3 + 2];
-    var b_x = vertices[indexB * 3];
-    var b_y = vertices[indexB * 3 + 1];
-    var b_z = vertices[indexB * 3 + 2];
-    var c_x = vertices[indexC * 3];
-    var c_y = vertices[indexC * 3 + 1];
-    var c_z = vertices[indexC * 3 + 2];
-    var d_x = vertices[indexD * 3];
-    var d_y = vertices[indexD * 3 + 1];
-    var d_z = vertices[indexD * 3 + 2];
-    if (Math.abs(a_y - b_y) < 0.01) {
+    const depth = (geometry as any)["parameters"].options.depth;
+    const curves = (geometry as any)["parameters"].shapes.curves as LineCurve3[];
+    const mX = curves.reduce((p, c) => [Math.min(p[0], c.v1.x, c.v2.x), Math.max(p[1], c.v1.x, c.v2.x)] as [number, number], [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER] as [number, number])
+    const mY = curves.reduce((p, c) => [Math.min(p[0], c.v1.y, c.v2.y), Math.max(p[1], c.v1.y, c.v2.y)] as [number, number], [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER] as [number, number])
+    const mZ = [0, depth] as [number, number]
+    const ofMax = (v: number, max: [number, number]) => (v - max[0]) / (max[1] - max[0]);
+    var a_x = ofMax(vertices[indexA * 3], mX);
+    var a_y = ofMax(vertices[indexA * 3 + 1], mY);
+    var a_z = ofMax(vertices[indexA * 3 + 2], mZ);
+    var b_x = ofMax(vertices[indexB * 3], mX);
+    var b_y = ofMax(vertices[indexB * 3 + 1], mY);
+    var b_z = ofMax(vertices[indexB * 3 + 2], mZ);
+    var c_x = ofMax(vertices[indexC * 3], mX);
+    var c_y = ofMax(vertices[indexC * 3 + 1], mY);
+    var c_z = ofMax(vertices[indexC * 3 + 2], mZ);
+    var d_x = ofMax(vertices[indexD * 3], mX);
+    var d_y = ofMax(vertices[indexD * 3 + 1], mY);
+    var d_z = ofMax(vertices[indexD * 3 + 2], mZ);
+
+    // if it's left or right side then x will not vary
+    if (Math.abs(a_x - b_x) < 0.01) {
+        const right = (x: number) => (a_x > 0.5) ? (1 - x) : x;
         return [
-            new Vector2(a_x, 1 - a_z),
-            new Vector2(b_x, 1 - b_z),
-            new Vector2(c_x, 1 - c_z),
-            new Vector2(d_x, 1 - d_z)
+            new Vector2(right(a_z), a_y),
+            new Vector2(right(b_z), b_y),
+            new Vector2(right(c_z), c_y),
+            new Vector2(right(d_z), d_y)
         ];
     } else {
         return [
-            new Vector2(a_y, 1 - a_z),
-            new Vector2(b_y, 1 - b_z),
-            new Vector2(c_y, 1 - c_z),
-            new Vector2(d_y, 1 - d_z)
+            new Vector2(0, 0),
+            new Vector2(0, 0),
+            new Vector2(0, 0),
+            new Vector2(0, 0)
         ];
     }
 }
@@ -120,13 +130,15 @@ export const Text = forwardRef(({ width, height, text, backgroundColor, color, d
     }, [text, onClick])
     return (
         <mesh ref={ref} onClick={_onClick} position={[position[0], position[1], position[2] - depth / 2]}  {...props}>
-            <boxBufferGeometry args={[_width, _height, depth || 0.06]} attach="geometry" />
+            <boxBufferGeometry args={[_width, _height, depth]} attach="geometry" />
             <extrudeGeometry attach="geometry" args={[shape, extrudeSettings]} />
             <meshStandardMaterial roughness={0.2} metalness={0.6} attachArray="material" >
                 <canvasTexture attach="map" image={textCanvas} />
             </meshStandardMaterial>
-            <meshStandardMaterial roughness={0.2} metalness={0.8} attachArray="material" color={backgroundColor} />
-        </mesh>
+            <meshStandardMaterial roughness={0.2} metalness={0.6} attachArray="material"  >
+                <canvasTexture attach="map" image={textCanvas} />
+            </meshStandardMaterial>
+        </mesh >
     )
 })
 

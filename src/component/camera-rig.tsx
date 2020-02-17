@@ -4,7 +4,7 @@ import { Vector3 } from "three"
 
 export function useCameraPan(targetPosition: Vector3) {
     const { camera } = useThree();
-    const [camPos, setCamPos] = useState({ pos: { x: 0, y: 0, z: 5 }, vel: { x: 0, y: 0, z: 0 } })
+    const [camPos, setCamPos] = useState({ pos: { x: 0, y: 0, z: 4 }, vel: { x: 0, y: 0, z: 0 } })
     const damper = 0.92;
     const spring = 0.005;
 
