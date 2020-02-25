@@ -1,31 +1,15 @@
-import React, { useCallback, useState, FC } from 'react'
-import { useFrame, useThree } from 'react-three-fiber'
+import React, { useCallback, useState, FC, useEffect } from 'react'
+import { useFrame, useThree, stateContext } from 'react-three-fiber'
 import { Vector3 } from "three"
+import { useVel } from "./use-spring-3d"
 
 export function useCameraPan(targetPosition: Vector3) {
     const { camera } = useThree();
-    const [camPos, setCamPos] = useState({ pos: { x: 0, y: 0, z: 4 }, vel: { x: 0, y: 0, z: 0 } })
-    const damper = 0.92;
-    const spring = 0.005;
-
-    const onFrame = useCallback(() => {
-        setCamPos(state => ({
-            vel: {
-                x: ((targetPosition.x - state.pos.x) * spring + state.vel.x) * damper,
-                y: ((targetPosition.y - state.pos.y) * spring + state.vel.y) * damper,
-                z: ((targetPosition.z - state.pos.z + 5) * spring + state.vel.z) * damper
-            },
-            pos: {
-                x: state.pos.x + state.vel.x,
-                y: state.pos.y + state.vel.y,
-                z: state.pos.z + state.vel.z
-            }
-        }));
-    }, [targetPosition])
-    useFrame(onFrame);
-    camera.lookAt(new Vector3(camPos.pos.x + camPos.vel.x * 3, camPos.pos.y + camPos.vel.y * 3, camPos.pos.z + camPos.vel.z * 3 - 5))
-    camera.position.set(camPos.pos.x, camPos.pos.y, camPos.pos.z)
-    return [camPos.pos.x, camPos.pos.y, camPos.pos.z];
+    const camPos = useVel(new Vector3(0, 0, 10), targetPosition, { spring: 0.006, damper: 0.9 });
+    const camLookAt = useVel(new Vector3(0, 0, 0), new Vector3(targetPosition.x, targetPosition.y, targetPosition.z - 6), { spring: 0.01, damper: 0.85 })
+    camera.lookAt(camLookAt)
+    camera.position.set(camPos.x, camPos.y, camPos.z)
+    return [camPos.x, camPos.y, camPos.z];
 }
 
 export function useSelectedNode(points: any[]) {
@@ -40,6 +24,6 @@ export function useSelectedNode(points: any[]) {
 }
 
 export const CameraRig: FC<{ targetPosition: Vector3 }> = ({ targetPosition }) => {
-    const pos = useCameraPan(targetPosition);
+    const pos = useCameraPan(new Vector3(targetPosition.x, targetPosition.y, targetPosition.z + 4));
     return <camera attach="camera" position={pos} />
 }

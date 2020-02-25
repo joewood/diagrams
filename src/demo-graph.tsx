@@ -1,21 +1,21 @@
-import React, { useState, useCallback } from 'react'
-import { Canvas } from 'react-three-fiber'
-import { Color, Vector3 } from "three"
-import { Graph } from "./component/graph"
-import { useDag } from "./component/dagre-graph"
-import { useNgraph } from './component/nlayout-graph'
+import React, { useCallback, useState } from "react";
+import { Canvas } from "react-three-fiber";
+import { Color } from "three";
+import { useDag } from "./component/dagre-graph";
+import { Graph } from "./component/graph";
+import { useNgraph } from "./component/nlayout-graph";
 
-const height = 8;
-const width = 60;
+const height = 12;
+const width = 30;
 
-const vwapEngine = "VWAP Engine"
-const oms = "OMS"
-const market = "Exch Links"
-const trading = "Trading Sys"
-const prices = "MD Sys"
-const client = "Client"
-const clientIn = "Client In"
-const clientOut = "Client Out"
+const vwapEngine = "VWAP Engine";
+const oms = "OMS";
+const market = "Exch Links";
+const trading = "Trading Sys";
+const prices = "MD Sys";
+const client = "Client";
+const clientIn = "Client In";
+const clientOut = "Client Out";
 
 const nodes = [
     { name: "Ref Data Svc", width: width, height: height },
@@ -28,8 +28,7 @@ const nodes = [
     { name: "Config", width, height },
     { name: trading, width, height },
     { name: clientOut, width, height }
-
-]
+];
 
 const edges = [
     { from: clientIn, to: oms, weight: 2 },
@@ -45,21 +44,38 @@ const edges = [
     { from: market, to: oms, weight: 2 },
     // { from: market, to: trading },
     { from: trading, to: clientOut }
-]
+];
 
 export const DemoGraph = () => {
-    const [selectedNode, setNode] = useState<string | null>(null)
+    const [selectedNode, setNode] = useState<string | null>(null);
     const graph = useNgraph(nodes, edges);
     // const graph = useDag(nodes, edges, "RL");
-    const unselect = useCallback((p) => {
-        setNode(null);
-    }, [setNode])
+    const unselect = useCallback(
+        p => {
+            setNode(null);
+        },
+        [setNode]
+    );
     return (
         <Canvas pixelRatio={window.devicePixelRatio} onClickCapture={unselect}>
             <ambientLight />
-            <spotLight position={[6, 2, 2]} color={new Color("#fff")} intensity={0.6} />
-            <spotLight position={[-6, 2, 2]} color={new Color("#fff")} intensity={0.6} />
-            <Graph graph={graph} selectedNode={selectedNode} onSelectNode={({ text }) => setNode(text)} />
-        </Canvas >
-    )
-}
+            <spotLight position={[6, 2, 15]} color={new Color("#fff")} intensity={0.8} />
+            <spotLight position={[-6, -2, 15]} color={new Color("#fff")} intensity={0.6} />
+            <Graph
+                graph={graph}
+                feed={{
+                    to: clientIn,
+                    messages: [
+                        { messageKey: "A" },
+                        { messageKey: "B" },
+                        { messageKey: "C" },
+                        { messageKey: "D" },
+                        { messageKey: "E" }
+                    ]
+                }}
+                selectedNode={selectedNode}
+                onSelectNode={({ text }) => setNode(text)}
+            />
+        </Canvas>
+    );
+};
