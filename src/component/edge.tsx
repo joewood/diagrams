@@ -85,7 +85,7 @@ export const Edge: FC<EdgeProps> = ({ fromNode, toNode, messages, points, durati
     return (
         <>
             <mesh key={`${fromNode.name}-${toNode.name}-edge`}>
-                <tubeGeometry attach="geometry" args={[curve, 30, 0.03, 8, false]} />
+                <tubeGeometry attach="geometry" args={[curve, 80, 0.03, 8, false]} />
                 <meshPhongMaterial attach="material" color="#333" />
             </mesh>
             <Messages

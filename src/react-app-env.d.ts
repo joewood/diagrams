@@ -16,11 +16,12 @@ declare module JSX {
 }
 
 declare module "ngraph.forcelayout3d" {
-    function x(layout: any): Layout;
+    function x(layout: any, settings: any): Layout;
     interface Layout {
         getGraphRect(): { x1: number; x2: number; y1: number; y2: number; z1: number; z2: number };
         getNodePosition(nodeId: string): { x: number; y: number; z: number };
         step();
+        setNodePosition(nodeId: string, x: number, y: number, z: number);
     }
     export default x;
 }

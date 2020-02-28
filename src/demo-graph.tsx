@@ -1,55 +1,25 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useMemo, useEffect } from "react";
 import { Canvas } from "react-three-fiber";
 import { Color } from "three";
-import { useDag } from "./component/dagre-graph";
-import { Graph } from "./component/graph";
-import { useNgraph } from "./component/nlayout-graph";
+import { useDag } from "./graph/dagre-graph";
+import { Graph } from "./graph/graph";
+import { useNgraph } from "./graph/nlayout-graph";
 
-const height = 12;
-const width = 30;
+interface DemoGraphProps {
+    nodes: { name: string; width: number; height: number; depth: number; x?: number; y?: number; z?: number }[];
+    edges: { from: string; to: string; weight?: number }[];
+    pumpProducer: string | null;
+    pumpValue: string[] | null;
+}
 
-const vwapEngine = "VWAP Engine";
-const oms = "OMS";
-const market = "Exch Links";
-const trading = "Trading Sys";
-const prices = "MD Sys";
-const client = "Client";
-const clientIn = "Client In";
-const clientOut = "Client Out";
-
-const nodes = [
-    { name: "Ref Data Svc", width: width, height: height },
-    { name: "EOD Prices", width, height },
-    { name: prices, width, height },
-    { name: clientIn, width, height },
-    { name: vwapEngine, width: width, height: height },
-    { name: oms, width: width, height: height },
-    { name: market, width, height },
-    { name: "Config", width, height },
-    { name: trading, width, height },
-    { name: clientOut, width, height }
-];
-
-const edges = [
-    { from: clientIn, to: oms, weight: 2 },
-    { from: "Ref Data Svc", to: vwapEngine },
-    { from: "Config", to: vwapEngine, messages: 1, weight: 2 },
-    { from: prices, to: vwapEngine, messages: 20, weight: 2 },
-    { from: "EOD Prices", to: vwapEngine, messages: 5 },
-    { from: "EOD Prices", to: trading, messages: 5 },
-    { from: vwapEngine, to: oms, weight: 2 },
-    { from: oms, to: vwapEngine },
-    { from: oms, to: market },
-    { from: oms, to: trading },
-    { from: market, to: oms, weight: 2 },
-    // { from: market, to: trading },
-    { from: trading, to: clientOut }
-];
-
-export const DemoGraph = () => {
+export const DemoGraph = ({ pumpProducer, pumpValue, nodes, edges }: DemoGraphProps) => {
     const [selectedNode, setNode] = useState<string | null>(null);
     const graph = useNgraph(nodes, edges);
     // const graph = useDag(nodes, edges, "RL");
+    const messages = useMemo(
+        () => (pumpValue && pumpProducer && pumpValue.map((v, i) => ({ messageKey: v }))) || null,
+        [pumpValue, pumpProducer]
+    );
     const unselect = useCallback(
         p => {
             setNode(null);
@@ -58,21 +28,14 @@ export const DemoGraph = () => {
     );
     return (
         <Canvas pixelRatio={window.devicePixelRatio} onClickCapture={unselect}>
-            <ambientLight />
-            <spotLight position={[6, 2, 15]} color={new Color("#fff")} intensity={0.8} />
-            <spotLight position={[-6, -2, 15]} color={new Color("#fff")} intensity={0.6} />
+            <ambientLight args={[0x0ffffff, 0.9]} />
+            <directionalLight position={[6, 2, 15]} args={[0x0ffaaaa, 0.7]} />
+            <directionalLight position={[-6, 2, 15]} args={[0x0aaffaa, 0.7]} />
+            <directionalLight position={[-6, 2, -25]} args={[0x0aaaaff, 0.7]} />
+            <directionalLight position={[6, 2, -25]} args={[0x0ffaaff, 0.7]} />
             <Graph
                 graph={graph}
-                feed={{
-                    to: clientIn,
-                    messages: [
-                        { messageKey: "A" },
-                        { messageKey: "B" },
-                        { messageKey: "C" },
-                        { messageKey: "D" },
-                        { messageKey: "E" }
-                    ]
-                }}
+                feed={[{ to: pumpProducer, messages: messages || [] }]}
                 selectedNode={selectedNode}
                 onSelectNode={({ text }) => setNode(text)}
             />
