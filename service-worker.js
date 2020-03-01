@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/dag-3d/precache-manifest.3ce039588a961a2adda18371a39e4b8a.js"
+  "/dag-3d/precache-manifest.29c46ab66dfaf5ba63c7af24ed2a8238.js"
 );
 
 self.addEventListener('message', (event) => {
