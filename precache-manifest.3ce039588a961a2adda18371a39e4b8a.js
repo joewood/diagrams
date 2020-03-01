@@ -1,11 +1,11 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "f7933621889490467cb0418cd0327715",
+    "revision": "2e038439594bcec9728eb5cd0f66dea3",
     "url": "/dag-3d/index.html"
   },
   {
-    "revision": "d392abdb66b2ed189315",
-    "url": "/dag-3d/static/css/main.30cc6834.chunk.css"
+    "revision": "549df3b4cbea642eb973",
+    "url": "/dag-3d/static/css/main.ec2c9acd.chunk.css"
   },
   {
     "revision": "f210c34770def801c723",
@@ -16,8 +16,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/dag-3d/static/js/2.d203269c.chunk.js.LICENSE.txt"
   },
   {
-    "revision": "d392abdb66b2ed189315",
-    "url": "/dag-3d/static/js/main.db7df5df.chunk.js"
+    "revision": "549df3b4cbea642eb973",
+    "url": "/dag-3d/static/js/main.05a309c5.chunk.js"
   },
   {
     "revision": "bfbea20fd8c29e6349bf",
