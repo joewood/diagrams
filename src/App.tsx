@@ -3,7 +3,7 @@ import "./App.css";
 import { DemoGraph } from "./demo-graph";
 import { RecordStream } from "./component/record-stream";
 
-const height = 20;
+const height = 15;
 const width = 20;
 const depth = 20;
 
@@ -51,9 +51,17 @@ const buttonStyle = {
 
 const App: React.FC = () => {
     const [pump, setPump] = useState<{ id: string; v: string[] } | null>(null);
+    const [orbit, setOrbit] = useState<boolean>(false);
     const pump1 = useCallback(() => setPump({ id: producer1, v: ["1X"] }), [setPump]);
     const pump2 = useCallback(() => setPump({ id: producer2, v: ["2X"] }), [setPump]);
     const pump3 = useCallback(() => setPump({ id: producer3, v: ["3X"] }), [setPump]);
+    const orbitChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
+        ({ target }) => {
+            console.log("Checked " + target.checked);
+            setOrbit(target.checked);
+        },
+        [setOrbit]
+    );
 
     return (
         <div className="App">
@@ -68,6 +76,11 @@ const App: React.FC = () => {
                 <button style={buttonStyle} onClick={pump3}>
                     Pump Producer #3
                 </button>
+                <label className="switch" style={{ margin: 3 }}>
+                    <input className="switch-input" type="checkbox" checked={orbit} onChange={orbitChange} />
+                    <span className="switch-label" data-on="Pan" data-off="Auto"></span>
+                    <span className="switch-handle"></span>
+                </label>
                 <div>
                     <RecordStream filename="dag3d" />
                 </div>
@@ -77,6 +90,7 @@ const App: React.FC = () => {
                 pumpValue={pump && pump.v}
                 nodes={nodes}
                 edges={edges}
+                orbit={orbit}
             />
         </div>
     );

@@ -3,26 +3,13 @@ import layout3d from "ngraph.forcelayout3d";
 import { useMemo } from "react";
 import { PositionedNode, PositionedEdge, Layout, MinMax } from "./use-graph-viewport";
 import { Vector3 } from "three";
+import { SimEdge, SimNode } from "./sim-model";
 
-interface Node {
-    name: string;
-    x?: number;
-    y?: number;
-    z?: number;
-    width: number;
-    height: number;
-    depth: number;
-}
-
-interface Edge {
-    from: string;
-    to: string;
-}
 const ITERATIONS_COUNT = 100;
 
-export function useNgraph(nodes: Node[], edges: Edge[]): Layout {
+export function useNgraph(nodes: SimNode[], edges: SimEdge[]): Layout {
     const positioned = useMemo(() => {
-        var graph = createGraph<Node, Edge>();
+        var graph = createGraph<SimNode, SimEdge>();
         for (const n of nodes) {
             graph.addNode(n.name, n);
         }

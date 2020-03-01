@@ -2,7 +2,7 @@ import { keyBy } from "lodash";
 import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useFrame, useThree } from "react-three-fiber";
 import { CatmullRomCurve3, Vector3 } from "three";
-import { MessageArrived, Messages } from "./messages";
+import { MessageArrived, EdgeMessages } from "./messages";
 import { NodeProps, NodeType } from "./node";
 
 export function usePath(points: Vector3[]) {
@@ -63,8 +63,8 @@ function useTrackMessages(
 export interface EdgeProps extends Pick<NodeProps, "onEgress"> {
     points: Vector3[];
     duration: number;
-    fromNode: NodeType;
-    toNode: NodeType;
+    fromNode: string;
+    toNode: string;
     elapsed: number;
     messages?: MessageArrived[];
 }
@@ -84,14 +84,14 @@ export const Edge: FC<EdgeProps> = ({ fromNode, toNode, messages, points, durati
     const curve = usePath(points);
     return (
         <>
-            <mesh key={`${fromNode.name}-${toNode.name}-edge`}>
+            <mesh key={`${fromNode}-${toNode}-edge`}>
                 <tubeGeometry attach="geometry" args={[curve, 80, 0.03, 8, false]} />
                 <meshPhongMaterial attach="material" color="#333" />
             </mesh>
-            <Messages
-                key={`${fromNode.name}-${toNode.name}-messages`}
+            <EdgeMessages
+                key={`${fromNode}-${toNode}-messages`}
                 elapsed={elapsedMs}
-                prefix={`${fromNode.name}-${toNode.name}-messages`}
+                prefix={`${fromNode}-${toNode}-messages`}
                 curve={curve}
                 duration={duration}
                 messages={messagesBuffered}

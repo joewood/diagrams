@@ -2,21 +2,9 @@ import { graphlib, layout } from "dagre";
 import { useMemo } from "react";
 import { Layout, PositionedNode, PositionedEdge } from "./use-graph-viewport";
 import { Vector3 } from "three";
+import { SimEdge, SimNode } from "./sim-model";
 
-export interface Node {
-    name: string;
-    width: number;
-    height: number;
-}
-
-export interface Edge {
-    from: string;
-    to: string;
-    messages?: number;
-    weight?: number;
-}
-
-export function useDag(nodes: Node[], edges: Edge[], direction = "LR"): Layout {
+export function useDag(nodes: SimNode[], edges: SimEdge[], direction = "LR"): Layout {
     return useMemo<Layout>(() => {
         const g = new graphlib.Graph({ directed: true });
         g.setGraph({ edgesep: 100, nodesep: 100, marginx: 20, marginy: 20, rankdir: "LR" });
@@ -27,7 +15,7 @@ export function useDag(nodes: Node[], edges: Edge[], direction = "LR"): Layout {
             g.setNode(node.name, { label: node.name, width: node.width, height: node.height, x: 100, y: 0 });
         }
         for (const edge of edges) {
-            g.setEdge(edge.from, edge.to, { minlen: 1, messages: edge.messages, weight: edge.weight });
+            g.setEdge(edge.from, edge.to, { minlen: 1, weight: edge.weight });
         }
         layout(g, { marginx: 250, marginy: 250 });
         const retnodes = g.nodes().map<PositionedNode>(n => ({

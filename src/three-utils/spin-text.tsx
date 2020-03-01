@@ -1,14 +1,14 @@
-import React, { FC, Ref, useRef } from "react";
+import React, { FC, Ref, useRef, RefObject } from "react";
 import { useFrame } from "react-three-fiber";
-import { Euler } from "three";
-import { MeshProps, Text, TextProps } from "./text";
+import { Euler, Mesh } from "three";
+import { Text, TextProps } from "./text";
 
 interface SpinProps extends TextProps {
     spinX?: number;
     spinY?: number;
 }
 export const SpinText: FC<SpinProps> = ({ spinX, spinY, ...props }) => {
-    const ref: Ref<MeshProps> = useRef<MeshProps>(null);
+    const ref = useRef<Mesh>() as RefObject<Mesh>;
     useFrame(({ clock }) => {
         const c = ref.current;
         if (!!c) {

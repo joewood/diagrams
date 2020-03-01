@@ -1,8 +1,7 @@
-import React, { forwardRef, Ref, useCallback, useMemo } from "react";
-import { ReactThreeFiber } from "react-three-fiber";
+import React, { forwardRef, useCallback, useMemo } from "react";
 import { ExtrudeBufferGeometry, ExtrudeGeometryOptions, LineCurve3, Mesh, Shape, Vector2, Vector3 } from "three";
 
-export type MeshProps = ReactThreeFiber.Object3DNode<Mesh, typeof Mesh>;
+// export type MeshNode = ReactThreeFiber.Object3DNode<Mesh, typeof Mesh>;
 
 export interface TextProps {
     width: number;
@@ -81,11 +80,8 @@ const generateSideWallUV = (
     }
 };
 
-export const Text = forwardRef(
-    (
-        { width, height, text, backgroundColor, color, depth, onClick, position, ...props }: TextProps,
-        ref: Ref<MeshProps>
-    ) => {
+export const Text = forwardRef<Mesh, TextProps>(
+    ({ width, height, text, backgroundColor, color, depth, onClick, position, ...props }: TextProps, ref) => {
         const _width = width;
         const _height = height;
         const _text = text;
@@ -140,12 +136,9 @@ export const Text = forwardRef(
             context.fillText(_text, x, y);
             return canvas;
         }, [_width, _height, color, backgroundColor, _text]);
-        const _onClick = useCallback(
-            (e: any) => {
-                onClick({ text });
-            },
-            [text, onClick]
-        );
+        const _onClick = useCallback(() => {
+            onClick({ text });
+        }, [text, onClick]);
         return (
             <mesh ref={ref} onClick={_onClick} position={position} {...props}>
                 <boxBufferGeometry args={[_width, _height, depth]} attach="geometry" />

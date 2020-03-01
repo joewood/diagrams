@@ -1,5 +1,5 @@
-import React, { FC, useCallback, useMemo, useState } from "react";
-import { Vector3 } from "three";
+import React, { FC, useCallback, useMemo, useState, useRef, RefObject } from "react";
+import { Vector3, Mesh } from "three";
 import { Edge, EdgeProps } from "./edge";
 import { MessageProps, MessageArrived } from "./messages";
 import { Text } from "../three-utils/text";
@@ -22,8 +22,8 @@ export interface NodeProps {
     name: string;
     edges: NodeEdgeType[];
     messages: MessageArrived[] | undefined;
-    onEgress: (fromNode: NodeType, toNode: NodeType, messages: MessageArrived[]) => void;
-    onSelect: (args: NodeType) => void;
+    onEgress: (fromNode: string, toNode: string, messages: MessageArrived[]) => void;
+    onSelect: (args: { name: string; mesh: Mesh }) => void;
 }
 
 export function useCheckMessages(messages: MessageType[] | undefined) {
@@ -39,14 +39,20 @@ interface LabelProps {
     depth: number;
     height: number;
     position: Vector3;
-    onSelect: (x: { name: string }) => void;
+    onSelect: (args: { name: string; mesh: Mesh }) => void;
 }
 
 export const Label: FC<LabelProps> = ({ name, position, width, height, depth, onSelect }) => {
-    const _onSelect = useCallback(({ text }: { text: string }) => onSelect({ name: text }), [onSelect]);
+    const ref = useRef<Mesh>() as RefObject<Mesh>;
+    const _onSelect = useCallback(
+        ({ text }: { text: string }) => ref.current && onSelect({ name: text, mesh: ref.current }),
+        [onSelect]
+    );
+    const pos = useMemo(() => new Vector3(position.x, position.y, position.z - depth / 2), [position, depth]);
     return (
         <Text
             key={name}
+            ref={ref}
             onClick={_onSelect}
             text={name}
             color={"#202020"}
@@ -54,7 +60,7 @@ export const Label: FC<LabelProps> = ({ name, position, width, height, depth, on
             height={height * 0.25}
             backgroundColor="#a0a0ff"
             depth={depth}
-            position={new Vector3(position.x, position.y, position.z - depth / 2)}
+            position={pos}
         />
     );
 };
@@ -62,7 +68,7 @@ export const Label: FC<LabelProps> = ({ name, position, width, height, depth, on
 export const Edges: FC<{ edges: EdgeProps[] }> = ({ edges }) => (
     <>
         {edges.map(edge => (
-            <Edge key={`${edge.fromNode.name}-${edge.toNode.name}-edge`} {...edge} />
+            <Edge key={`${edge.fromNode}-${edge.toNode}-edge`} {...edge} />
         ))}
     </>
 );
@@ -91,14 +97,14 @@ export function useEdges(
     name: string,
     messages: MessageArrived[] | undefined,
     elapsed: number,
-    onEgress: (fromNode: Pick<NodeProps, "name">, toNode: Pick<NodeProps, "name">, messages: MessageArrived[]) => void
+    onEgress: (fromNode: string, toNode: string, messages: MessageArrived[]) => void
 ) {
     return useMemo<EdgeProps[]>(
         () =>
             edges.map(edge => ({
                 ...edge,
                 duration: edge.duration, //+ Math.floor(Math.random() * 4),
-                fromNode: { name },
+                fromNode: name,
                 messages,
                 elapsed,
                 onEgress

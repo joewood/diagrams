@@ -1,34 +1,25 @@
 import { groupBy } from "lodash";
-import React, { FC, useCallback, useMemo, useState, useEffect } from "react";
+import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useThree } from "react-three-fiber";
-import { Vector3 } from "three";
+import { Vector3, Mesh } from "three";
 import { MessageArrived, MessageProps } from "../component/messages";
-import { Node, NodeEdgeType, NodeProps, NodeType } from "../component/node";
+import { Node, NodeEdgeType, NodeProps } from "../component/node";
 import { CameraRig } from "../three-utils/camera-rig";
-import { Layout, useGraphViewPort, useScaleFactor, scalePoint } from "./use-graph-viewport";
-
-// extend({ OrbitControls })
-
-// function Controls() {
-// 	const controls = useRef() as any //Ref<ReactThreeFiber.Object3DNode<OrbitControls,typeof OrbitControls>>
-// 	const { camera, gl } = useThree()
-// 	useFrame(() => controls && controls.current && controls.current.update())
-// 	return (
-// 		<orbitControls ref={controls} args={[camera, gl.domElement]} enableDamping dampingFactor={0.1} rotateSpeed={0.5} />
-// 	)
-// }
+import { Layout, scalePoint, useGraphViewPort, useScaleFactor } from "./use-graph-viewport";
 
 interface GraphProps {
     graph: Layout;
     feed: { to: string | null; messages: MessageProps[] }[];
-    onSelectNode: (args: { text: string }) => void;
+    onSelectNode: (args: { name: string; mesh: Mesh }) => void;
     selectedNode?: string | null;
+    orbit: boolean;
 }
 
 type FeedType = { [nodeName: string]: { count: number; messages: MessageArrived[] | undefined } | undefined };
-export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed }) => {
+export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed, orbit }) => {
     const { clock, viewport } = useThree();
     const [messageState, setMessageState] = useState<FeedType>({});
+    // const [selectedMesh, setSelectedMesh] = useState<Mesh | null>(null);
     const scaleFactor = useScaleFactor(graph);
     useEffect(
         () =>
@@ -48,7 +39,7 @@ export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed 
                                             frame: clock.getElapsedTime() + (i / c.messages.length) * 5
                                         } as MessageArrived)
                                 ),
-                                count: ((state[c.to!] && state[c.to!]?.count) || 0) + c.messages.length
+                                count: (state[c.to!]?.count || 0) + c.messages.length
                             }
                         }),
                         state
@@ -59,18 +50,19 @@ export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed 
     const scaledGraph = useGraphViewPort(graph);
 
     const onSelect = useCallback(
-        ({ name }: NodeType) => {
-            onSelectNode({ text: name });
+        (args: { name: string; mesh: Mesh }) => {
+            onSelectNode(args);
+            // setSelectedMesh(args.mesh);
         },
         [onSelectNode]
     );
     const onEgress = useCallback(
-        (fromNode: NodeType, toNode: NodeType, messages: MessageArrived[]) => {
+        (fromNode: string, toNode: string, messages: MessageArrived[]) => {
             setMessageState((state: FeedType) => ({
                 ...state,
-                [fromNode.name]: { ...(state[fromNode.name] || { count: 0 }), messages: undefined },
-                [toNode.name]: {
-                    ...(state[toNode.name] || { count: 0 }),
+                [fromNode]: { ...(state[fromNode] || { count: 0 }), messages: undefined },
+                [toNode]: {
+                    ...(state[toNode] || { count: 0 }),
                     messages: messages.map(m => ({ ...m, frame: clock.getElapsedTime() }))
                 }
             }));
@@ -83,8 +75,8 @@ export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed 
             const edges = (edgesPerNode[node.name] || []).map<NodeEdgeType>(edge => ({
                 points: edge.points,
                 duration: 5,
-                fromNode: { name: edge.from },
-                toNode: { name: edge.to },
+                fromNode: edge.from,
+                toNode: edge.to,
                 onEgress
             }));
             return {
@@ -109,6 +101,7 @@ export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed 
     return (
         <>
             <CameraRig
+                orbit={orbit}
                 targetPosition={
                     selectedNodeIndex === null
                         ? scalePoint(
