@@ -3,6 +3,7 @@ export interface SimNode {
     x?: number;
     y?: number;
     z?: number;
+    type?: string;
     width: number;
     height: number;
     depth: number;

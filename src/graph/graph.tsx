@@ -6,6 +6,7 @@ import { MessageArrived, MessageProps } from "../component/messages";
 import { Node, NodeEdgeType, NodeProps } from "../component/node";
 import { CameraRig } from "../three-utils/camera-rig";
 import { Layout, scalePoint, useGraphViewPort, useScaleFactor } from "./use-graph-viewport";
+import { BrokerQueueNode } from "../component/broker-queue";
 
 interface GraphProps {
     graph: Layout;
@@ -82,6 +83,7 @@ export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed,
             return {
                 position: node.position,
                 name: node.name,
+                type: node.type,
                 onEgress,
                 width: node.width,
                 height: node.height,
@@ -123,9 +125,13 @@ export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed,
                 }
                 distance={selectedNode === null ? 8 : 4.5}
             />
-            {nodes.map((node, i) => (
-                <Node key={node.name} {...node} />
-            ))}
+            {nodes.map((node, i) =>
+                node.type === "broker" ? (
+                    <BrokerQueueNode key={node.name} {...node} />
+                ) : (
+                    <Node key={node.name} {...node} />
+                )
+            )}
         </>
     );
 };

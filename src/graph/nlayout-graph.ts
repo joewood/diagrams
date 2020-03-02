@@ -30,7 +30,8 @@ export function useNgraph(nodes: SimNode[], edges: SimEdge[]): Layout {
                 width: n.width,
                 height: n.height,
                 depth: n.depth,
-                position: new Vector3(x, y, z)
+                position: new Vector3(x, y, z),
+                type: n.type || "basic"
             };
         });
         const retEdges: PositionedEdge[] = edges.map(e => {

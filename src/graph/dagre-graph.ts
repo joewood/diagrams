@@ -12,7 +12,14 @@ export function useDag(nodes: SimNode[], edges: SimEdge[], direction = "LR"): La
             return {};
         });
         for (const node of nodes) {
-            g.setNode(node.name, { label: node.name, width: node.width, height: node.height, x: 100, y: 0 });
+            g.setNode(node.name, {
+                type: node.type || "basic",
+                label: node.name,
+                width: node.width,
+                height: node.height,
+                x: 100,
+                y: 0
+            });
         }
         for (const edge of edges) {
             g.setEdge(edge.from, edge.to, { minlen: 1, weight: edge.weight });
@@ -23,7 +30,8 @@ export function useDag(nodes: SimNode[], edges: SimEdge[], direction = "LR"): La
             width: g.node(n).width,
             height: g.node(n).height,
             depth: 1,
-            position: new Vector3(g.node(n).x, g.node(n).y, -0.1)
+            position: new Vector3(g.node(n).x, g.node(n).y, -0.1),
+            type: g.node(n).type || "basic"
         }));
         const retedges = g.edges().map<PositionedEdge>(e => {
             return {

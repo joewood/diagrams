@@ -16,6 +16,7 @@ export interface NodeEdge {
 
 export interface NodeProps {
     position: Vector3;
+    type: string;
     width: number;
     height: number;
     depth: number;

@@ -23,7 +23,7 @@ const nodes = [
     { name: producer1, ...commonNode, x: 100 },
     { name: producer2, ...commonNode, x: 100 },
     { name: producer3, ...commonNode, x: 100 },
-    { name: messageQueue, ...commonNode },
+    { name: messageQueue, type: "broker", ...commonNode },
     { name: consumer1, ...commonNode, x: -100 },
     { name: consumer2, ...commonNode, x: -100 },
     { name: consumer3, ...commonNode, x: -100 },

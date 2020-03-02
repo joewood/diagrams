@@ -72,7 +72,7 @@ export const CameraRig: FC<CameraRigggProps> = ({ targetPosition, distance, orbi
     const pos = useCameraPan(targetPosition, { distance, orbit });
     return (
         <>
-            {!orbit && <perspectiveCamera attach="camera" {...(!orbit && { position: pos })} args={[45, 2, 1, 100]} />}
+            <perspectiveCamera attach="camera" {...(!orbit && { position: pos })} args={[45, 2, 1, 100]} />
             {orbit && <Controls target={pos} />}
         </>
     );

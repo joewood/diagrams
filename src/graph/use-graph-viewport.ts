@@ -6,6 +6,7 @@ export interface PositionedNode {
     name: string;
     width: number;
     height: number;
+    type: string;
     depth: number;
     position: Vector3;
 }
@@ -103,6 +104,7 @@ export function useGraphViewPort(graph: Layout): Layout {
     return useMemo<Layout>(() => {
         const nodes = graph.nodes.map<PositionedNode>(node => ({
             name: node.name,
+            type: node.type,
             position: scaleToFit3(node.position, midGraph, graph.depth[1] - graph.depth[0], scaleFactor),
             width: node.width * scaleFactor, //, graph.width, viewport.width),
             height: node.height * scaleFactor, //, graph.height, viewport.height),

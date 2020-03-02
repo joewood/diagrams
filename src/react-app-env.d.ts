@@ -1,4 +1,5 @@
 /// <reference types="react-scripts" />
+
 // import Graph from "ngraph.graph"
 
 declare module JSX {
