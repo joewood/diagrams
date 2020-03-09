@@ -3,7 +3,7 @@ import layout3d from "ngraph.forcelayout3d";
 import { useMemo } from "react";
 import { PositionedNode, PositionedEdge, Layout, MinMax } from "./use-graph-viewport";
 import { Vector3 } from "three";
-import { SimEdge, SimNode } from "./sim-model";
+import { SimEdge, SimNode } from "../sim/sim-model";
 
 const ITERATIONS_COUNT = 100;
 
@@ -67,7 +67,7 @@ export function useNgraph(nodes: SimNode[], edges: SimEdge[]): Layout {
             return {
                 from: e.from,
                 to: e.to,
-                points: [fromPoint, fromHose, midp, toHose, toPoint]
+                edgePoints: [fromPoint, fromHose, midp, toHose, toPoint]
             };
         });
         const { x1, x2, y1, y2, z1, z2 } = layout.getGraphRect();

@@ -1,6 +1,6 @@
-import React, { FC, useCallback, useState, useRef } from "react";
-import { useFrame, useThree, extend } from "react-three-fiber";
-import { Vector3, PerspectiveCamera } from "three";
+import React, { FC, useCallback, useState, useRef, memo } from "react";
+import { useFrame, useThree, extend, RenderCallback } from "react-three-fiber";
+import { Vector3 } from "three";
 import { useVel } from "./use-spring-3d";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
@@ -50,8 +50,8 @@ export function useCameraPan(targetPosition: Vector3, { distance, rotate, orbit 
 
 export function useSelectedNode(points: any[]) {
     const [index, setIndex] = useState(0);
-    const cb = useCallback(
-        ({ clock }: any) => {
+    const cb = useCallback<RenderCallback>(
+        ({ clock }) => {
             const time = clock.getElapsedTime() / 2;
             const index = Math.floor(time) % points.length;
             setIndex(index);
@@ -68,7 +68,7 @@ interface CameraRigggProps {
     orbit?: boolean;
 }
 
-export const CameraRig: FC<CameraRigggProps> = ({ targetPosition, distance, orbit }) => {
+export const CameraRig = memo<CameraRigggProps>(({ targetPosition, distance, orbit }) => {
     const pos = useCameraPan(targetPosition, { distance, orbit });
     return (
         <>
@@ -76,4 +76,4 @@ export const CameraRig: FC<CameraRigggProps> = ({ targetPosition, distance, orbi
             {orbit && <Controls target={pos} />}
         </>
     );
-};
+});

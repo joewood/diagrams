@@ -1,6 +1,6 @@
-import React, { FC, useRef, useState, useEffect } from "react";
+import React, { FC, useRef, useState, useEffect, useMemo, memo } from "react";
 import { useFrame } from "react-three-fiber";
-import { DoubleSide, Color, MeshBasicMaterial, ShapePath, Vector3, BackSide } from "three";
+import { DoubleSide, Color, MeshBasicMaterial, ShapePath, Vector3, BackSide, RGBA_ASTC_5x4_Format } from "three";
 import { SVGLoader, SVGResult, StrokeStyle } from "three/examples/jsm/loaders/SVGLoader";
 // import { GridHelper} from "three/examples/jsm/helpers/PositionalAudioHelper"
 
@@ -37,7 +37,7 @@ const SvgMeshPath: FC<SvgMeshPathProps> = ({
                     ref={fillMat}
                     color={new Color().setStyle(userData.style.fill)}
                     opacity={userData.style.fillOpacity}
-                    transparent={userData.style.fillOpacity?.toString() === "0"}
+                    transparent={userData.style.fillOpacity < 1}
                     side={DoubleSide}
                     depthWrite={false}
                     wireframe={fillShapesWireframe}
@@ -73,52 +73,61 @@ const SvgMeshPath: FC<SvgMeshPathProps> = ({
 };
 
 interface SvgMeshProps {
+    /** URL or relative path to SVG file */
     url: string;
+    /** World coordinates of mesh, centered in the middle */
     position: Vector3;
-    scale: number;
-    drawStrokes: boolean;
-    strokesWireframe: boolean;
-    drawFillShapes: boolean;
-    fillShapesWireframe: boolean;
+    /** Defaults to 1 x 1 */
+    scale?: number;
+    /** Options to draw or wireframe the SVG (default is to draw) */
+    drawStrokes?: boolean;
+    strokesWireframe?: boolean;
+    drawFillShapes?: boolean;
+    fillShapesWireframe?: boolean;
 }
 
-const SvgMesh: FC<SvgMeshProps> = ({
-    url,
-    position,
-    scale,
-    drawStrokes,
-    drawFillShapes,
-    fillShapesWireframe,
-    strokesWireframe
-}) => {
-    const [svgData, setSvgData] = useState<SVGResult | null>(null);
-    useEffect(() => {
-        const loader = new SVGLoader();
-        loader.load(url, result => {
-            setSvgData(result);
-        });
-    }, [url, setSvgData]);
-    return (
-        <group scale={[(1 / 500) * scale, (1 / 500) * scale, 1]} position={position.setX(position.x - 0.5 * scale)}>
-            {svgData &&
-                svgData.paths.map(
-                    path =>
+/** A Mesh Component created from an SVG file loaded at runtime. Renders a flat mesh using individual geometry from paths. */
+export const SvgMesh = memo<SvgMeshProps>(
+    ({
+        url,
+        position,
+        scale = 1,
+        drawStrokes = true,
+        drawFillShapes = true,
+        fillShapesWireframe = false,
+        strokesWireframe = false
+    }) => {
+        const [svgData, setSvgData] = useState<SVGResult | null>(null);
+        const [viewBox, setViewBox] = useState<number[]>([0, 0, 500, 500]);
+        useEffect(() => {
+            const loader = new SVGLoader();
+            loader.load(url, result => {
+                setSvgData(result);
+                const viewbox = (result.xml.ownerDocument?.children[0] as any)?.viewBox?.baseVal;
+                if (!!viewbox) setViewBox([viewbox.x, viewbox.y, viewbox.width, viewbox.height]);
+                console.log({ viewbox });
+            });
+        }, [url, setSvgData]);
+        const pos = useMemo(() => new Vector3(position.x - 0.5 * scale, position.y - 0.5 * scale, position.z), [
+            scale,
+            position
+        ]);
+        return (
+            <group
+                scale={[(1 / (viewBox[2] - viewBox[0])) * scale, (1 / (viewBox[3] - viewBox[1])) * scale, 1]}
+                position={pos}
+            >
+                {svgData?.paths?.map(
+                    (path, i) =>
                         path && (
                             <SvgMeshPath
+                                key={`MeshPath-${i}`}
                                 path={path as ShapePath2}
                                 options={{ drawFillShapes, drawStrokes, strokesWireframe, fillShapesWireframe }}
                             />
                         )
                 )}
-        </group>
-    );
-};
-
-SvgMesh.defaultProps = {
-    drawFillShapes: true,
-    drawStrokes: true,
-    fillShapesWireframe: false,
-    strokesWireframe: false
-};
-
-export { SvgMesh };
+            </group>
+        );
+    }
+);

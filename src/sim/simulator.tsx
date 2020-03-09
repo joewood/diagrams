@@ -1,20 +1,22 @@
 import React, { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { Canvas } from "react-three-fiber";
-import { Graph } from "./graph/graph";
-import { useNgraph } from "./graph/nlayout-graph";
-import { SimNode, SimEdge } from "./graph/sim-model";
+import { Graph } from "../graph/graph";
+import { useNgraph } from "../graph/nlayout-graph";
+import { SimNode, SimEdge } from "./sim-model";
 import { DirectionalLight, Vector3, DirectionalLightHelper, Mesh } from "three";
 // import { MeshNode } from "./three-utils/text";
 
-interface DemoGraphProps {
+interface SimulatorProps {
     nodes: SimNode[];
     edges: SimEdge[];
     pumpProducer: string | null;
     pumpValue: string[] | null;
-    orbit: boolean;
+    options: {
+        orbit: boolean;
+    };
 }
 
-export const DemoGraph = ({ pumpProducer, pumpValue, nodes, edges, orbit }: DemoGraphProps) => {
+export const Simulator = ({ pumpProducer, pumpValue, nodes, edges, options }: SimulatorProps) => {
     const [selectedNode, setNode] = useState<string | null>(null);
     const [selectedMesh, setMesh] = useState<Mesh | null>(null);
     const graph = useNgraph(nodes, edges);
@@ -94,7 +96,7 @@ export const DemoGraph = ({ pumpProducer, pumpValue, nodes, edges, orbit }: Demo
                 feed={[{ to: pumpProducer, messages }]}
                 selectedNode={selectedNode}
                 onSelectNode={onSelectNode}
-                orbit={orbit}
+                orbit={options.orbit}
             />
         </Canvas>
     );

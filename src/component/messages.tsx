@@ -1,15 +1,6 @@
 import React, { FC, useMemo } from "react";
 import { CatmullRomCurve3 } from "three";
-
-export interface MessageProps {
-    messageKey: string;
-    value?: number;
-    content?: string;
-}
-
-export interface MessageArrived extends MessageProps {
-    frame: number;
-}
+import { MessageArrived } from "../hooks/message-hooks";
 
 interface EdgeMessagesProps {
     curve: CatmullRomCurve3;

@@ -85,6 +85,7 @@ export const Text = forwardRef<Mesh, TextProps>(
         const _width = width;
         const _height = height;
         const _text = text;
+        const adjustedPos = useMemo(() => position.clone().add(new Vector3(0, 0, depth / -2)), [position, depth]);
 
         const shape = useMemo(() => {
             const __shape = new Shape();
@@ -140,13 +141,13 @@ export const Text = forwardRef<Mesh, TextProps>(
             onClick({ text });
         }, [text, onClick]);
         return (
-            <mesh ref={ref} onClick={_onClick} position={position} {...props}>
+            <mesh ref={ref} onClick={_onClick} position={adjustedPos} {...props}>
                 <boxBufferGeometry args={[_width, _height, depth]} attach="geometry" />
                 <extrudeGeometry attach="geometry" args={[shape, extrudeSettings]} />
-                <meshStandardMaterial roughness={0.2} metalness={0.8} attachArray="material">
+                <meshStandardMaterial roughness={0.2} metalness={0.6} attachArray="material">
                     <canvasTexture attach="map" image={textCanvas} />
                 </meshStandardMaterial>
-                <meshStandardMaterial roughness={0.2} metalness={0.8} attachArray="material">
+                <meshStandardMaterial roughness={0.2} metalness={0.6} attachArray="material">
                     <canvasTexture attach="map" image={textCanvas} />
                 </meshStandardMaterial>
             </mesh>

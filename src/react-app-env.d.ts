@@ -13,6 +13,9 @@ declare module JSX {
         orbitControls: any; //I added this
         primitive: any; //I added this
         ambientLight: any; //I added this
+        wireframe: any;
+        wireframeGeometry2: any;
+        lineMaterial: any;
     }
 }
 
@@ -26,3 +29,5 @@ declare module "ngraph.forcelayout3d" {
     }
     export default x;
 }
+
+declare module "threejs-meshline" {}

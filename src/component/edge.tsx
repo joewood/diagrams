@@ -1,76 +1,57 @@
-import { keyBy } from "lodash";
-import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
-import { useFrame, useThree } from "react-three-fiber";
+import React, { memo, useCallback, useMemo, useState } from "react";
+import { useFrame } from "react-three-fiber";
 import { CatmullRomCurve3, Vector3 } from "three";
-import { MessageArrived, EdgeMessages } from "./messages";
-import { NodeProps, NodeType } from "./node";
+import { MessageArrived, NodeProps } from "../hooks/message-hooks";
 
-export function usePath(points: Vector3[]) {
+import {
+    useEgress,
+    useExpiredMessages,
+    useMessagePump,
+    useUnexpiredMessages,
+    useUpateState
+} from "../hooks/message-hooks";
+import { EdgeMessages } from "./messages";
+
+export function usePointsToMakeCurve(points: Vector3[]) {
     return useMemo(() => {
         return new CatmullRomCurve3(points, false, "catmullrom");
     }, [points]);
 }
 
-function useTrackMessages(
+/** this functions tracks message state based on a pump of messages
+ * When messages expire the callback is called
+ * It should be made generic for any object - it's a common pattern
+ * The duration expiry condition could also be made generic, with an exit clause
+ */
+function useMessageState(
     messagePump: MessageArrived[] | undefined,
     duration: number,
-    elapsedTime: number,
-    onEgress: (messages: MessageArrived[]) => void
+    onEgressForNodePair: (messages: MessageArrived[]) => void
 ) {
-    const [messages, setMessages] = useState<MessageArrived[] | undefined>(undefined);
-    useEffect(() => {
-        if (!messagePump || messagePump.length === 0) return;
-        // console.log("New messages: " + JSON.stringify(messagePump));
-        setMessages(msg => [...(msg || []), ...messagePump]);
-    }, [messagePump, duration]);
-    const unexpiredMessages = useMemo<MessageArrived[]>(() => {
-        if (!messages || messages.length === 0) return [];
-        const m = messages[0];
-        if (elapsedTime >= m.frame + duration) {
-            return messages.filter(m => elapsedTime < m.frame + duration);
-        } else {
-            return messages;
-        }
-    }, [messages, duration, elapsedTime]);
-
-    const expiredMessages = useMemo(() => {
-        const emptyArray: MessageArrived[] = [];
-        if (!messages || messages.length === 0) {
-            return emptyArray;
-        }
-        const m = messages[0];
-        if (elapsedTime >= m.frame + duration) {
-            // console.log("Filtering ");
-            return messages.filter(m => elapsedTime >= m.frame + duration);
-        } else return emptyArray;
-    }, [messages, duration, elapsedTime]);
-
-    useEffect(() => {
-        if (!expiredMessages || expiredMessages.length === 0) return;
-        const keyed = keyBy(expiredMessages, m => m.messageKey);
-        setMessages(msg => (msg || []).filter(m => !keyed[m.messageKey]));
-    }, [expiredMessages]);
-
-    useEffect(() => {
-        // console.log({ elapsedTime });
-        if (!expiredMessages || expiredMessages.length === 0) return;
-        // console.log("Time to delete: " + expiredMessages.length + " " + messages?.length);
-        onEgress(expiredMessages);
-    }, [duration, expiredMessages, onEgress]);
+    // add new messages from props
+    const [messages, setMessages] = useMessagePump(messagePump);
+    // get the unexpired messages based on the current time
+    const unexpiredMessages = useUnexpiredMessages(messages, duration);
+    // get the expired messages for edgress callback
+    const expiredMessages = useExpiredMessages(messages, duration);
+    // update the state for unexpired
+    useUpateState(messages, unexpiredMessages, setMessages);
+    // egress report expired messages
+    useEgress(expiredMessages, onEgressForNodePair);
     return unexpiredMessages;
 }
 
 export interface EdgeProps extends Pick<NodeProps, "onEgress"> {
-    points: Vector3[];
+    /** Edge Key Points to the Node in World Coordinates */
+    edgePoints: Vector3[];
     duration: number;
     fromNode: string;
     toNode: string;
-    elapsed: number;
-    messages?: MessageArrived[];
+    pumpMessages?: MessageArrived[];
 }
 
-export const Edge: FC<EdgeProps> = ({ fromNode, toNode, messages, points, duration, elapsed, onEgress }) => {
-    const _onEgress = useCallback((messages: MessageArrived[]) => onEgress(fromNode, toNode, messages), [
+export const Edge = memo<EdgeProps>(({ fromNode, toNode, pumpMessages, edgePoints, duration, onEgress }) => {
+    const onEgressForNodePair = useCallback((messages: MessageArrived[]) => onEgress(fromNode, toNode, messages), [
         fromNode,
         toNode,
         onEgress
@@ -79,23 +60,24 @@ export const Edge: FC<EdgeProps> = ({ fromNode, toNode, messages, points, durati
     useFrame(({ clock }) => {
         setElapsedMs(clock.elapsedTime);
     });
-
-    const messagesBuffered = useTrackMessages(messages, duration, elapsed, _onEgress);
-    const curve = usePath(points);
+    const messagesKey = useMemo(() => `${fromNode}-${toNode}-messages`, [fromNode, toNode]);
+    const meshKey = useMemo(() => `${fromNode}-${toNode}-edge`, [fromNode, toNode]);
+    const unexpiredMessages = useMessageState(pumpMessages, duration, onEgressForNodePair);
+    const edgeCurve = usePointsToMakeCurve(edgePoints);
     return (
         <>
-            <mesh key={`${fromNode}-${toNode}-edge`}>
-                <tubeGeometry attach="geometry" args={[curve, 80, 0.03, 8, false]} />
+            <mesh key={meshKey}>
+                <tubeGeometry attach="geometry" args={[edgeCurve, 80, 0.03, 8, false]} />
                 <meshPhongMaterial attach="material" color="#333" />
             </mesh>
             <EdgeMessages
-                key={`${fromNode}-${toNode}-messages`}
+                key={messagesKey}
                 elapsed={elapsedMs}
-                prefix={`${fromNode}-${toNode}-messages`}
-                curve={curve}
+                prefix={messagesKey}
+                curve={edgeCurve}
                 duration={duration}
-                messages={messagesBuffered}
+                messages={unexpiredMessages}
             />
         </>
     );
-};
+});

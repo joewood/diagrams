@@ -1,6 +1,6 @@
 import React, { useState, useCallback, CSSProperties } from "react";
 import "./App.css";
-import { DemoGraph } from "./demo-graph";
+import { Simulator } from "./sim/simulator";
 import { RecordStream } from "./component/record-stream";
 
 const height = 15;
@@ -85,12 +85,12 @@ const App: React.FC = () => {
                     <RecordStream filename="dag3d" />
                 </div>
             </header>
-            <DemoGraph
+            <Simulator
                 pumpProducer={(pump && pump.id) || null}
                 pumpValue={pump && pump.v}
                 nodes={nodes}
                 edges={edges}
-                orbit={orbit}
+                options={{ orbit }}
             />
         </div>
     );

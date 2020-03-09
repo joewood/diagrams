@@ -2,7 +2,7 @@ import { graphlib, layout } from "dagre";
 import { useMemo } from "react";
 import { Layout, PositionedNode, PositionedEdge } from "./use-graph-viewport";
 import { Vector3 } from "three";
-import { SimEdge, SimNode } from "./sim-model";
+import { SimEdge, SimNode } from "../sim/sim-model";
 
 export function useDag(nodes: SimNode[], edges: SimEdge[], direction = "LR"): Layout {
     return useMemo<Layout>(() => {
@@ -35,7 +35,7 @@ export function useDag(nodes: SimNode[], edges: SimEdge[], direction = "LR"): La
         }));
         const retedges = g.edges().map<PositionedEdge>(e => {
             return {
-                points: g.edge(e).points.map(p => new Vector3(p.x, p.y, -0.1)),
+                edgePoints: g.edge(e).points.map(p => new Vector3(p.x, p.y, -0.1)),
                 from: e.v,
                 to: e.w
             };

@@ -1,12 +1,12 @@
 import { groupBy } from "lodash";
-import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
+import React, { FC, useCallback, useEffect, useMemo, useState, memo } from "react";
 import { useThree } from "react-three-fiber";
 import { Vector3, Mesh } from "three";
-import { MessageArrived, MessageProps } from "../component/messages";
-import { Node, NodeEdgeType, NodeProps } from "../component/node";
+import { MessageArrived, MessageProps, NodeProps, NodeEdgeType } from "../hooks/message-hooks";
+import { Node } from "../component/node";
 import { CameraRig } from "../three-utils/camera-rig";
 import { Layout, scalePoint, useGraphViewPort, useScaleFactor } from "./use-graph-viewport";
-import { BrokerQueueNode } from "../component/broker-queue";
+import { BrokerQueueNode } from "../sim/broker-queue";
 
 interface GraphProps {
     graph: Layout;
@@ -17,7 +17,7 @@ interface GraphProps {
 }
 
 type FeedType = { [nodeName: string]: { count: number; messages: MessageArrived[] | undefined } | undefined };
-export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed, orbit }) => {
+export const Graph = memo<GraphProps>(({ graph, onSelectNode, selectedNode, feed, orbit }) => {
     const { clock, viewport } = useThree();
     const [messageState, setMessageState] = useState<FeedType>({});
     // const [selectedMesh, setSelectedMesh] = useState<Mesh | null>(null);
@@ -73,13 +73,6 @@ export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed,
     const edgesPerNode = useMemo(() => groupBy(scaledGraph.edges, e => e.from), [scaledGraph]);
     const nodes = useMemo(() => {
         return scaledGraph.nodes.map<NodeProps>(node => {
-            const edges = (edgesPerNode[node.name] || []).map<NodeEdgeType>(edge => ({
-                points: edge.points,
-                duration: 5,
-                fromNode: edge.from,
-                toNode: edge.to,
-                onEgress
-            }));
             return {
                 position: node.position,
                 name: node.name,
@@ -90,7 +83,13 @@ export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed,
                 depth: node.depth,
                 onSelect: onSelect,
                 messages: (messageState[node.name] && messageState[node.name]?.messages) || undefined,
-                edges
+                edges: edgesPerNode[node.name]?.map(
+                    ed =>
+                        ({
+                            edgePoints: ed.edgePoints,
+                            toNode: ed.to
+                        } as NodeEdgeType)
+                )
             };
         });
     }, [scaledGraph, onSelect, messageState, onEgress, edgesPerNode]);
@@ -134,4 +133,4 @@ export const Graph: FC<GraphProps> = ({ graph, onSelectNode, selectedNode, feed,
             )}
         </>
     );
-};
+});
