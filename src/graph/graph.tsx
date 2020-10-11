@@ -10,6 +10,7 @@ import { BrokerQueueNode } from "../sim/broker-queue";
 
 interface GraphProps {
     graph: Layout;
+    /** Message pump into a producer */
     feed: { to: string | null; messages: MessageProps[] }[];
     onSelectNode: (args: { name: string; mesh: Mesh }) => void;
     selectedNode?: string | null;
@@ -17,6 +18,7 @@ interface GraphProps {
 }
 
 type FeedType = { [nodeName: string]: { count: number; messages: MessageArrived[] | undefined } | undefined };
+/** Main graph of the Simulator containing layed out Nodes and Edges */
 export const Graph = memo<GraphProps>(({ graph, onSelectNode, selectedNode, feed, orbit }) => {
     const { clock, viewport } = useThree();
     const [messageState, setMessageState] = useState<FeedType>({});

@@ -1,4 +1,5 @@
-import React, { FC, Ref, useRef, RefObject } from "react";
+import * as React from "react";
+import { FC, RefObject, useRef } from "react";
 import { useFrame } from "react-three-fiber";
 import { Euler, Mesh } from "three";
 import { Text, TextProps } from "./text";

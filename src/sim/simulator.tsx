@@ -9,13 +9,16 @@ import { DirectionalLight, Vector3, DirectionalLightHelper, Mesh } from "three";
 interface SimulatorProps {
     nodes: SimNode[];
     edges: SimEdge[];
+    /** Node name of the producer pumping the messages */
     pumpProducer: string | null;
+    /** Actual message values. Must be referential equal to indicate no change. */
     pumpValue: string[] | null;
     options: {
         orbit: boolean;
     };
 }
 
+/** The main Simulator component, consisting of nodes, edges and a message pump to feed the simulator */
 export const Simulator = ({ pumpProducer, pumpValue, nodes, edges, options }: SimulatorProps) => {
     const [selectedNode, setNode] = useState<string | null>(null);
     const [selectedMesh, setMesh] = useState<Mesh | null>(null);

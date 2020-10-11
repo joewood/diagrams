@@ -1,6 +1,6 @@
-import React, { memo, RefObject, useCallback, useMemo, useRef } from "react";
+import React, { memo, RefObject, useMemo, useRef } from "react";
 import { Mesh, Vector3 } from "three";
-import { Text } from "../three-utils/text";
+import { Text } from "three-utils/src/text";
 
 interface LabelProps {
     /** Name and text to appear on node */
@@ -25,7 +25,7 @@ export const Label = memo<LabelProps>(({ name, position, width, height, depth, o
     // );
     const pos = useMemo(() => position.clone().add(new Vector3(0, height * -0.25 - height * 0.125, 0)), [
         height,
-        position
+        position,
     ]);
     return (
         <Text

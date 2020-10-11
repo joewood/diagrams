@@ -26,8 +26,10 @@ export interface MessageProps {
     content?: string;
 }
 
+/** A message with a starting reference point */
 export interface MessageArrived extends MessageProps {
     frame: number;
+    index: number;
 }
 
 /** Mandatory interface for all Graph Nodes */
@@ -45,32 +47,39 @@ export interface NodeProps {
     onSelect: (args: { name: string; mesh: Mesh }) => void;
 }
 
+type Indexed = { index: number };
+type NullableArray<T> = T[] | undefined;
+type StateSetState<T> = [T[], Dispatch<SetStateAction<T[]>>];
 /** Simple hook to help use a property to append state to a component.
  * Prop should ensure it follows Memoized rules. A new reference object means a new set of messages.
+ * Each new message has an unique incremental index
  */
-export function useMessagePump<T>(
-    messagePump: T[] | undefined
-): [T[] | undefined, Dispatch<SetStateAction<T[] | undefined>>] {
-    const [messages, setMessages] = useState<T[] | undefined>(undefined);
+export function useMessagePump<T>(messagePump: NullableArray<T>): StateSetState<T & Indexed> {
+    type IndexedMessage = Indexed & T;
+    const [messages, setMessages] = useState<IndexedMessage[]>([]);
+    const [total, setTotal] = useState(0);
+    const [prevPump, setPrevPump] = useState<NullableArray<T>>();
     useEffect(() => {
-        if (!messagePump || messagePump.length === 0) return;
-        setMessages(msg => [...(msg || []), ...messagePump]);
-    }, [messagePump]);
+        if (!messagePump || messagePump.length === 0 || messagePump === prevPump) return;
+        setPrevPump(messagePump);
+        setMessages((msg) => [...(msg || []), ...messagePump.map((m, i) => ({ ...m, index: i + total }))]);
+        setTotal((total) => total + messagePump.length);
+    }, [messagePump, total, setPrevPump, setMessages, setTotal, prevPump]);
     return [messages, setMessages];
 }
 
-/** Simple hook to effeciently return the set of messages that have not expired past the duration+frame */
+/** Simple hook to efficiently return the set of messages that have not expired past the duration+frame */
 export function useUnexpiredMessages<T extends { frame: number }>(
     messages: T[] | undefined,
     duration: number
 ): T[] | undefined {
     const {
-        clock: { elapsedTime }
+        clock: { elapsedTime },
     } = useThree();
     if (!messages || messages.length === 0) return undefined;
     const m = messages[0];
     if (elapsedTime >= m.frame + duration) {
-        return messages.filter(m => elapsedTime < m.frame + duration);
+        return messages.filter((m) => elapsedTime < m.frame + duration);
     } else {
         return messages;
     }
@@ -84,12 +93,12 @@ export function useExpiredMessages<T extends { frame: number }>(
     duration: number
 ): T[] | undefined {
     const {
-        clock: { elapsedTime }
+        clock: { elapsedTime },
     } = useThree();
     if (!messages || messages.length === 0) return undefined;
     const m = messages[0];
     if (elapsedTime >= m.frame + duration) {
-        return messages.filter(m => elapsedTime >= m.frame + duration);
+        return messages.filter((m) => elapsedTime >= m.frame + duration);
     } else return undefined;
 }
 
@@ -101,7 +110,7 @@ export function useUpateState<T>(
 ) {
     useEffect(() => {
         if (currentState !== newState) {
-            setState(oldState => newState);
+            setState((oldState) => newState);
         }
     }, [newState, currentState, setState]);
 }
@@ -114,6 +123,7 @@ export function useEgress<T>(expiredMessages: T[] | undefined, onEgress: (messag
     }, [expiredMessages, onEgress]);
 }
 
+/** A transform hook returning edge points relative to the source node */
 export function useEdgesPositions(
     edges: NodeEdgeType[] | undefined,
     fromNode: string,
@@ -124,11 +134,11 @@ export function useEdgesPositions(
     return useMemo(
         () =>
             edges?.map<EdgeProps>(({ toNode, edgePoints }) => ({
-                edgePoints: edgePoints.map(edgePoint => edgePoint.clone().sub(nodePosition)),
+                edgePoints: edgePoints.map((edgePoint) => edgePoint.clone().sub(nodePosition)),
                 duration,
                 fromNode,
                 toNode,
-                onEgress
+                onEgress,
             })),
         [edges, fromNode, nodePosition, duration, onEgress]
     );
@@ -137,9 +147,9 @@ export function useEdgesPositions(
 export function usePumpEdges(edges: EdgeProps[] | undefined, messages: MessageArrived[] | undefined) {
     return useMemo(
         () =>
-            edges?.map<EdgeProps>(edge => ({
+            edges?.map<EdgeProps>((edge) => ({
                 ...edge,
-                pumpMessages: messages?.map(msg => ({ ...msg }))
+                pumpMessages: messages?.map((msg) => ({ ...msg })),
             })),
         [edges, messages]
     );

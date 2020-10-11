@@ -39,10 +39,6 @@ export const BrokerQueueNode: FC<NodeProps> = ({
                 position={zeroPos}
             />
             <SvgMesh drawFillShapes drawStrokes url={logo} scale={width} position={new Vector3(0, height / 3, 0)} />
-            {/* <mesh position={zeroPos}>
-                <boxGeometry attach="geometry" args={[width, height, depth]} />
-                <lineBasicMaterial attach="material" args={[0x0808080, 1, "round", "round"]} />
-            </mesh> */}
 
             {pump?.map(edge => (
                 <Edge key={`${name}-${edge.toNode}-edge`} {...edge} />

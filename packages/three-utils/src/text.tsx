@@ -1,7 +1,6 @@
 import React, { forwardRef, useCallback, useMemo } from "react";
-import { ExtrudeBufferGeometry, ExtrudeGeometryOptions, LineCurve3, Mesh, Shape, Vector2, Vector3 } from "three";
-
-// export type MeshNode = ReactThreeFiber.Object3DNode<Mesh, typeof Mesh>;
+import { ExtrudeGeometryOptions } from "three/src/geometries/ExtrudeBufferGeometry";
+import { ExtrudeBufferGeometry, LineCurve3, Mesh, Shape, Vector2, Vector3 } from "three";
 
 export interface TextProps {
     width: number;
@@ -11,7 +10,7 @@ export interface TextProps {
     backgroundColor?: string;
     color?: string;
     position: Vector3;
-    onClick: (args: { text: string }) => void;
+    onClick?: (args: { text: string }) => void;
 }
 
 const stepFunction = (v: number, neg = false) => (neg ? 1 - (v / Math.abs(v) + 1) / 2 : (v / Math.abs(v) + 1) / 2);
@@ -73,7 +72,7 @@ const generateSideWallUV = (
             new Vector2(right(a_z), a_y),
             new Vector2(right(b_z), b_y),
             new Vector2(right(c_z), c_y),
-            new Vector2(right(d_z), d_y)
+            new Vector2(right(d_z), d_y),
         ];
     } else {
         return [new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 0)];
@@ -106,7 +105,7 @@ export const Text = forwardRef<Mesh, TextProps>(
                 bevelSize: 0.02,
                 bevelOffset: 0.0,
                 bevelSegments: 5,
-                UVGenerator: { generateTopUV, generateSideWallUV }
+                UVGenerator: { generateTopUV, generateSideWallUV },
             }),
             [depth]
         );
@@ -137,9 +136,7 @@ export const Text = forwardRef<Mesh, TextProps>(
             context.fillText(_text, x, y);
             return canvas;
         }, [_width, _height, color, backgroundColor, _text]);
-        const _onClick = useCallback(() => {
-            onClick({ text });
-        }, [text, onClick]);
+        const _onClick = useCallback(() => onClick?.({ text }), [text, onClick]);
         return (
             <mesh ref={ref} onClick={_onClick} position={adjustedPos} {...props}>
                 <boxBufferGeometry args={[_width, _height, depth]} attach="geometry" />

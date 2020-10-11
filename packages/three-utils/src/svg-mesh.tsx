@@ -1,7 +1,8 @@
-import React, { FC, useRef, useState, useEffect, useMemo, memo } from "react";
-import { useFrame } from "react-three-fiber";
-import { DoubleSide, Color, MeshBasicMaterial, ShapePath, Vector3, BackSide, RGBA_ASTC_5x4_Format } from "three";
-import { SVGLoader, SVGResult, StrokeStyle } from "three/examples/jsm/loaders/SVGLoader";
+import * as React from "react";
+
+import { FC, memo, useEffect, useMemo, useRef, useState } from "react";
+import { Color, DoubleSide, MeshBasicMaterial, ShapePath, Vector3 } from "three";
+import { StrokeStyle, SVGLoader, SVGResult } from "three/examples/jsm/loaders/SVGLoader";
 // import { GridHelper} from "three/examples/jsm/helpers/PositionalAudioHelper"
 
 interface ThisStyle extends StrokeStyle {
@@ -24,7 +25,7 @@ interface SvgMeshPathProps {
 
 const SvgMeshPath: FC<SvgMeshPathProps> = ({
     options: { drawFillShapes, fillShapesWireframe, drawStrokes, strokesWireframe },
-    path
+    path,
 }) => {
     const fillMat = useRef<MeshBasicMaterial>();
     const strokeMat = useRef<MeshBasicMaterial>();
@@ -95,22 +96,24 @@ export const SvgMesh = memo<SvgMeshProps>(
         drawStrokes = true,
         drawFillShapes = true,
         fillShapesWireframe = false,
-        strokesWireframe = false
+        strokesWireframe = false,
     }) => {
         const [svgData, setSvgData] = useState<SVGResult | null>(null);
         const [viewBox, setViewBox] = useState<number[]>([0, 0, 500, 500]);
         useEffect(() => {
-            const loader = new SVGLoader();
-            loader.load(url, result => {
+            async function loadSvg() {
+                const loader = new SVGLoader();
+                const result = await loader.loadAsync(url);
                 setSvgData(result);
                 const viewbox = (result.xml.ownerDocument?.children[0] as any)?.viewBox?.baseVal;
                 if (!!viewbox) setViewBox([viewbox.x, viewbox.y, viewbox.width, viewbox.height]);
                 console.log({ viewbox });
-            });
+            }
+            loadSvg();
         }, [url, setSvgData]);
         const pos = useMemo(() => new Vector3(position.x - 0.5 * scale, position.y - 0.5 * scale, position.z), [
             scale,
-            position
+            position,
         ]);
         return (
             <group

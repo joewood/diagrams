@@ -1,5 +1,4 @@
 import React, { memo, useCallback, useMemo, useState } from "react";
-import { useFrame } from "react-three-fiber";
 import { CatmullRomCurve3, Vector3 } from "three";
 import { MessageArrived, NodeProps } from "../hooks/message-hooks";
 
@@ -8,7 +7,7 @@ import {
     useExpiredMessages,
     useMessagePump,
     useUnexpiredMessages,
-    useUpateState
+    useUpateState,
 } from "../hooks/message-hooks";
 import { EdgeMessages } from "./messages";
 
@@ -54,12 +53,9 @@ export const Edge = memo<EdgeProps>(({ fromNode, toNode, pumpMessages, edgePoint
     const onEgressForNodePair = useCallback((messages: MessageArrived[]) => onEgress(fromNode, toNode, messages), [
         fromNode,
         toNode,
-        onEgress
+        onEgress,
     ]);
-    const [elapsedMs, setElapsedMs] = useState(0);
-    useFrame(({ clock }) => {
-        setElapsedMs(clock.elapsedTime);
-    });
+
     const messagesKey = useMemo(() => `${fromNode}-${toNode}-messages`, [fromNode, toNode]);
     const meshKey = useMemo(() => `${fromNode}-${toNode}-edge`, [fromNode, toNode]);
     const unexpiredMessages = useMessageState(pumpMessages, duration, onEgressForNodePair);
@@ -72,9 +68,8 @@ export const Edge = memo<EdgeProps>(({ fromNode, toNode, pumpMessages, edgePoint
             </mesh>
             <EdgeMessages
                 key={messagesKey}
-                elapsed={elapsedMs}
                 prefix={messagesKey}
-                curve={edgeCurve}
+                edgePoints={edgePoints}
                 duration={duration}
                 messages={unexpiredMessages}
             />

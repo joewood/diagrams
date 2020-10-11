@@ -1,13 +1,15 @@
-import React, { memo, useMemo, useRef, useEffect } from "react";
-import { Vector3, BoxGeometry, WireframeGeometry, Color } from "three";
+import React, { memo, useMemo, useRef } from "react";
+import { extend } from "react-three-fiber";
+import { Vector3 } from "three";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
 import { Wireframe } from "three/examples/jsm/lines/Wireframe";
 import { WireframeGeometry2 } from "three/examples/jsm/lines/WireframeGeometry2";
-import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
-import { NodeProps, useEdgesPositions, usePumpEdges, useMeshSelect } from "../hooks/message-hooks";
+import { NodeProps, useEdgesPositions, useMeshSelect, usePumpEdges } from "../hooks/message-hooks";
 import { Edge } from "./edge";
 import { Label } from "./label";
-import { extend } from "react-three-fiber";
 extend({ Wireframe, WireframeGeometry2, LineMaterial });
+
+/** A basic graph node representing a step - generic */
 export const Node = memo<NodeProps>(({ name, onSelect, width, height, depth, position, messages, edges, onEgress }) => {
     const nodeMidPosition = useMemo(() => position.clone().sub(new Vector3(0, 0, depth / -2)), [position, depth]);
     const edgeProps = useEdgesPositions(edges, name, position, 5, onEgress);
