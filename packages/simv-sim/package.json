@@ -1,0 +1,23 @@
+{
+    "name": "simv-sim",
+    "version": "1.0.0",
+    "description": "",
+    "main": "src/index.tsx",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "tsc -p ."
+    },
+    "dependencies": {
+        "simv-three-utils": "latest"
+    },
+    "peerDependencies": {
+        "react": "latest",
+        "react-dom": "latest",
+        "react-three-fiber": "latest",
+        "three": "latest"
+    },
+    "devDependencies": {},
+    "keywords": [],
+    "author": "",
+    "license": "ISC"
+}

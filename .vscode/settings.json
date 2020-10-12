@@ -5,8 +5,18 @@
         "Catmull",
         "Phong",
         "Wireframe",
+        "browserslist",
         "catmullrom",
+        "dagre",
+        "devtool",
+        "forcelayout",
+        "mediacapture",
+        "meshline",
         "metalness",
+        "ngraph",
+        "simv",
+        "svgr",
+        "threejs",
         "viewbox"
     ]
 }

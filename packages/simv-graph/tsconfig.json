@@ -1,0 +1,5 @@
+{
+    "extends": "../../base-config",
+    "compilerOptions": { "outDir": "./lib", "declaration": true, "declarationDir": "./lib" },
+    "include": ["src/*"]
+}

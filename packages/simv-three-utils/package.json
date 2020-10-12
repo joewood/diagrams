@@ -1,0 +1,20 @@
+{
+    "name": "simv-three-utils",
+    "version": "1.0.0",
+    "description": "",
+    "main": "src/index.tsx",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "tsc -p ."
+    },
+    "peerDependencies": {
+        "react": "^16.13.1",
+        "react-dom": "^16.13.1",
+        "react-three-fiber": "*",
+        "three": "*"
+    },
+    "devDependencies": {},
+    "keywords": [],
+    "author": "",
+    "license": "ISC"
+}

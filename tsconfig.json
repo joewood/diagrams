@@ -1,4 +1,7 @@
 {
     "extends": "./base-config",
+    "compilerOptions": {
+        "noEmit": true
+    },
     "include": ["src"]
 }
