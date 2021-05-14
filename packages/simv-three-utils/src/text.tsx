@@ -13,12 +13,12 @@ const generateTopUV = (
     indexC: number
 ) => {
     const rear = vertices[indexA * 3 + 2] < 0;
-    var a_x = stepFunction(vertices[indexA * 3], rear);
-    var a_y = stepFunction(vertices[indexA * 3 + 1], false);
-    var b_x = stepFunction(vertices[indexB * 3], rear);
-    var b_y = stepFunction(vertices[indexB * 3 + 1], false);
-    var c_x = stepFunction(vertices[indexC * 3], rear);
-    var c_y = stepFunction(vertices[indexC * 3 + 1], false);
+    const a_x = stepFunction(vertices[indexA * 3], rear);
+    const a_y = stepFunction(vertices[indexA * 3 + 1], false);
+    const b_x = stepFunction(vertices[indexB * 3], rear);
+    const b_y = stepFunction(vertices[indexB * 3 + 1], false);
+    const c_x = stepFunction(vertices[indexC * 3], rear);
+    const c_y = stepFunction(vertices[indexC * 3 + 1], false);
     return [new Vector2(a_x, a_y), new Vector2(b_x, b_y), new Vector2(c_x, c_y)];
 };
 
@@ -42,18 +42,18 @@ const generateSideWallUV = (
     );
     const mZ = [0, depth] as [number, number];
     const ofMax = (v: number, max: [number, number]) => (v - max[0]) / (max[1] - max[0]);
-    var a_x = ofMax(vertices[indexA * 3], mX);
-    var a_y = ofMax(vertices[indexA * 3 + 1], mY);
-    var a_z = ofMax(vertices[indexA * 3 + 2], mZ);
-    var b_x = ofMax(vertices[indexB * 3], mX);
-    var b_y = ofMax(vertices[indexB * 3 + 1], mY);
-    var b_z = ofMax(vertices[indexB * 3 + 2], mZ);
-    var c_x = ofMax(vertices[indexC * 3], mX);
-    var c_y = ofMax(vertices[indexC * 3 + 1], mY);
-    var c_z = ofMax(vertices[indexC * 3 + 2], mZ);
-    var d_x = ofMax(vertices[indexD * 3], mX);
-    var d_y = ofMax(vertices[indexD * 3 + 1], mY);
-    var d_z = ofMax(vertices[indexD * 3 + 2], mZ);
+    const a_x = ofMax(vertices[indexA * 3], mX);
+    const a_y = ofMax(vertices[indexA * 3 + 1], mY);
+    const a_z = ofMax(vertices[indexA * 3 + 2], mZ);
+    const b_x = ofMax(vertices[indexB * 3], mX);
+    const b_y = ofMax(vertices[indexB * 3 + 1], mY);
+    const b_z = ofMax(vertices[indexB * 3 + 2], mZ);
+    const c_x = ofMax(vertices[indexC * 3], mX);
+    const c_y = ofMax(vertices[indexC * 3 + 1], mY);
+    const c_z = ofMax(vertices[indexC * 3 + 2], mZ);
+    const d_x = ofMax(vertices[indexD * 3], mX);
+    const d_y = ofMax(vertices[indexD * 3 + 1], mY);
+    const d_z = ofMax(vertices[indexD * 3 + 2], mZ);
 
     // if it's left or right side then x will not vary
     if (Math.abs(a_x - b_x) < 0.01) {
@@ -76,12 +76,26 @@ export interface TextProps {
     depth?: number;
     backgroundColor?: string;
     color?: string;
+    fontSize?: number;
     position: Vector3;
     onClick?: (args: { text: string }) => void;
 }
 
 export const Text = forwardRef<Mesh, TextProps>(
-    ({ width = 1, height = 0.8, text, backgroundColor, color, depth = 0.04, position, ...props }: TextProps, ref) => {
+    (
+        {
+            width = 10,
+            height = 10,
+            text,
+            backgroundColor,
+            color,
+            depth = 0.04,
+            position,
+            fontSize,
+            ...props
+        }: TextProps,
+        ref
+    ) => {
         const adjustedPos = useMemo<Vector3>(() => position.clone().add(new Vector3(0, 0, depth / -2)), [
             position,
             depth,
@@ -102,9 +116,9 @@ export const Text = forwardRef<Mesh, TextProps>(
                 steps: 2,
                 depth: depth,
                 bevelEnabled: true,
-                bevelThickness: 0.03,
-                bevelSize: 0.02,
-                bevelOffset: 0.0,
+                bevelThickness: 0.03 * height,
+                bevelSize: 0.03 * height,
+                bevelOffset: 0,
                 bevelSegments: 5,
                 UVGenerator: { generateTopUV, generateSideWallUV },
             }),
@@ -112,31 +126,31 @@ export const Text = forwardRef<Mesh, TextProps>(
         );
 
         const textCanvas = useMemo(() => {
+            const scale = 10;
             const canvas = document.createElement("canvas");
             const context = canvas.getContext("2d");
             if (!context) return null;
-            const textureWidth = width * 20;
-            const textureHeight = height * 20;
-            canvas.style.position = "absolute";
-            canvas.style.top = `calc(50% - ${textureHeight / 2}px)`;
-            canvas.style.width = textureWidth + "px";
-            canvas.style.height = textureHeight + "px";
-            canvas.width = textureWidth * 20;
-            canvas.height = textureHeight * 20;
-            context.scale(20, 20);
-            context.fillStyle = backgroundColor || "grey";
+            // create a larger canvas than the text size to ensure good quality rendered text
+            const scaledWidth = width * scale;
+            const scaledHeight = height * scale;
+            Object.assign(canvas.style, {
+                position: "absolute",
+                top: `calc(50% - ${scaledHeight / 2}px)`,
+            });
+            canvas.width = scaledWidth;
+            canvas.height = scaledHeight;
 
-            context.fillRect(0, 0, textureWidth, textureHeight);
-            const fontSize = textureHeight / 1.8;
-            context.font = `bold ${fontSize}px Arial, sans-serif`;
+            context.scale(scale, scale);
+            context.fillStyle = backgroundColor || "grey";
+            context.fillRect(0, 0, width, height);
             context.fillStyle = color || "white";
             context.textAlign = "center";
             context.textBaseline = "middle";
-            const x = textureWidth / 2;
-            const y = textureHeight / 2;
-            context.fillText(text, x, y);
+            const midX = width / 2;
+            const midY = height / 2;
+            context.fillText(text, midX, midY);
             return canvas;
-        }, [width, height, color, backgroundColor, text]);
+        }, [width, height, color, backgroundColor, fontSize, text]);
         const _onClick = useCallback(() => props.onClick?.({ text }), [text, props.onClick]);
         return (
             <mesh ref={ref} onClick={_onClick} position={adjustedPos} {...props}>

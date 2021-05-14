@@ -1,9 +1,11 @@
 const path = require("path");
-// const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
+// const ReactRefreshPlugin = require("@pmmmwh/react-refresh-webpack-plugin");
 
 module.exports = {
+    target: "web",
     mode: "development",
     entry: path.resolve(__dirname, "src/index.tsx"),
+
     module: {
         rules: [
             {
@@ -26,9 +28,13 @@ module.exports = {
         path: path.resolve(__dirname, "dist"),
     },
     devtool: "inline-source-map",
-    // plugins: [new ForkTsCheckerWebpackPlugin()],
     devServer: {
+        publicPath: "/",
         contentBase: path.join(__dirname, "dist"),
+        historyApiFallback: true,
         port: 9000,
+        watchContentBase: true,
+        hot: true,
     },
+    // plugins: [isDevelopment && new ReactRefreshPlugin()],
 };

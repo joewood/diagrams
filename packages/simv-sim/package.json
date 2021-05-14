@@ -13,8 +13,8 @@
     "peerDependencies": {
         "react": "latest",
         "react-dom": "latest",
-        "react-three-fiber": "latest",
-        "three": "latest"
+        "react-three-fiber": "*",
+        "three": "*"
     },
     "devDependencies": {},
     "keywords": [],
