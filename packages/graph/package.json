@@ -1,0 +1,42 @@
+{
+    "name": "@graph3d/graph",
+    "version": "0.1.0",
+    "private": true,
+    "homepage": "https://joewood.github.io/dag-3d",
+    "main": "lib/index.js",
+    "types": "lib/index.d.ts",
+    "devDependencies": {
+        "@types/lodash": "latest",
+        "@types/node": "latest",
+        "@types/react": "^17.0",
+        "@types/react-dom": "^17.0",
+        "@types/three": "latest"
+    },
+    "dependencies": {
+        "@graph3d/three-utils": "*",
+        "@react-three/drei": "latest",
+        "@visx/text": "^2.3.0",
+        "framer-motion": "^5.5.5",
+        "lodash-es": "latest",
+        "ngraph.forcelayout": "^3.2.0",
+        "ngraph.graph": "^19.1.0"
+    },
+    "peerDependencies": {
+        "@react-three/fiber": "*",
+        "react": "^17.0.2",
+        "react-dom": "^17.0.2",
+        "three": "*"
+    },
+    "scripts": {
+        "start": "tsc -p . --watch",
+        "clean": "rm -rf lib",
+        "build": "tsx -p ."
+    },
+    "eslintConfig": {
+        "extends": "react-app"
+    },
+    "prettier": {
+        "tabWidth": 4,
+        "printWidth": 120
+    }
+}

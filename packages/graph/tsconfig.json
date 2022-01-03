@@ -1,0 +1,10 @@
+{
+    "extends": "../../base",
+    "include": ["src/**/*"],
+    "compilerOptions": {
+        "outDir": "lib/",
+        "sourceMap": true,
+        "declarationDir": "lib/",
+        "declaration": true
+    }
+}
