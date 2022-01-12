@@ -42,8 +42,10 @@ export interface GraphNode3 extends GraphNode {
 export interface GraphEdge {
     from: string;
     to: string;
+    label?: string;
     weight?: number;
     hierarchical?: boolean;
+    score?: number;
 }
 
 export type MinMax = [number, number];
@@ -62,7 +64,7 @@ export interface LayoutNode3 extends LayoutNode {
 export interface LayoutEdge extends GraphEdge {
     name: string;
     points: Point[];
-    hide?:boolean;
+    hide?: boolean;
 }
 
 export interface LayoutEdge3 extends LayoutEdge {
@@ -75,7 +77,7 @@ export interface Layout {
     minPoint: Point;
     maxPoint: Point;
     expanded: string[];
-    textSize:number;
+    textSize: number;
 }
 
 export interface Layout3 extends Layout {
@@ -93,7 +95,7 @@ export function getAnchor(nodePosition: Point, nodeSize: Size, fromPoint: Point)
     const directionY = abs(dy) / dy;
     dy = dy - (nodeSize.height / 2) * directionY;
     let dx = fromPoint.x - nodePosition.x;
-    const directionX = dx===0 ? 1 : abs(dx) / dx;
+    const directionX = dx === 0 ? 1 : abs(dx) / dx;
     dx = dx - (nodeSize.width / 2) * directionX;
     // if the point is further down/up than left/right then use bottom/top anchor
     if (abs(dy) > abs(dx)) {
@@ -123,3 +125,18 @@ export function minMax(nodes: LayoutNode[], padding = 0): { x1: number; x2: numb
 export function getMidPoint(from: number, to: number, delta: number) {
     return (to - from) * delta + from;
 }
+
+export function calculateDistance(edge: GraphEdge, node1: GraphNode, node2: GraphNode): number {
+    if (edge.hierarchical) return 5;
+    if (!node1.parent || !node2.parent) return 30;
+    // if linked to a virtual level 2 node
+    // if siblings
+    if (node1.parent === node2.parent) return 25;
+    if (node1.parent !== node2.parent) return 40;
+    return 35;
+}
+
+export const transition = {
+    type: "easeInOut",
+    duration: 0.6,
+};

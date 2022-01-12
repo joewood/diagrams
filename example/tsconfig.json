@@ -1,0 +1,10 @@
+{
+  "extends": "./../base",
+  "include": [
+    "src/**/*"
+  ],
+  "compilerOptions": {
+    "module": "esnext",
+    "noEmit": true
+  }
+}

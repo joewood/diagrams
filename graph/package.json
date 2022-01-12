@@ -1,40 +1,40 @@
 {
-    "name": "@graph3d/graph",
-    "version": "0.1.0",
-    "private": true,
+    "name": "@diagrams/graph",
+    "version": "0.1.1",
+    "private": false,
+    "license": "MIT",
+    "repository": {
+        "url": "https://github.com/joewood/diagrams"
+    },
     "homepage": "https://joewood.github.io/dag-3d",
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "devDependencies": {
         "@types/lodash": "latest",
         "@types/node": "latest",
-        "@types/react": "^17.0",
-        "@types/react-dom": "^17.0",
-        "@types/three": "latest"
+        "@types/react": "latest",
+        "@types/react-dom": "latest"
     },
     "dependencies": {
-        "@graph3d/three-utils": "*",
-        "@react-three/drei": "latest",
         "@visx/text": "^2.3.0",
         "framer-motion": "^5.5.5",
         "lodash-es": "latest",
-        "ngraph.forcelayout": "^3.2.0",
-        "ngraph.graph": "^19.1.0"
+        "ngraph.forcelayout": "^3.3.0",
+        "ngraph.graph": "^20.0.0"
     },
     "peerDependencies": {
-        "@react-three/fiber": "*",
         "react": "^17.0.2",
-        "react-dom": "^17.0.2",
-        "three": "*"
+        "react-dom": "^17.0.2"
     },
     "scripts": {
         "start": "tsc -p . --watch",
         "clean": "rm -rf lib",
-        "build": "tsx -p ."
+        "build": "tsc -p ."
     },
     "eslintConfig": {
         "extends": "react-app"
     },
+    "files": ["lib"],
     "prettier": {
         "tabWidth": 4,
         "printWidth": 120
