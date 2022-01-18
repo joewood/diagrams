@@ -15,8 +15,8 @@
    },
    "scripts": {
       "start": "concurrently --kill-others -n graph,example npm:start-graph npm:start-example",
-      "start-graph": "FORCE_COLORS npm start -w graph | cat",
-      "start-example": "FORCE_COLORS npm start -w example | cat"
+      "start-graph": "FORCE_COLORS=1 npm start -w graph | cat",
+      "start-example": "FORCE_COLORS=1 npm start -w example | cat"
    },
    "eslintConfig": {
       "extends": "react-app"
