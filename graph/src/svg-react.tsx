@@ -6,18 +6,23 @@ import { Text } from "@visx/text";
 
 interface RectProps {
     name: string;
+    initialSize: Size | undefined;
     size: Size;
+    initialPosition: Point | undefined;
     position: Point;
     fillColor?: string;
     borderColor?: string;
     textColor?: string;
     textSize?: number;
+    text?:string;
     verticalAnchor?: "start" | "end" | "middle";
     onSelectNode?: (args: { name: string }) => void;
 }
 
 export const RectIt: FC<RectProps> = ({
     name,
+    initialPosition,
+    initialSize,
     position,
     size,
     fillColor = "rgba(0,0,255,0.2)",
@@ -25,6 +30,7 @@ export const RectIt: FC<RectProps> = ({
     textColor = "white",
     verticalAnchor = "middle",
     textSize,
+    text,
     onSelectNode,
 }) => {
     const onClick = useCallback(() => {
@@ -37,10 +43,10 @@ export const RectIt: FC<RectProps> = ({
                 layoutId={name}
                 initial={{
                     opacity: 0,
-                    width: size.width,
-                    height: size.height,
-                    x: position.x,
-                    y: position.y,
+                    width: initialSize?.width ?? size.width,
+                    height: initialSize?.height ?? size.height,
+                    x: initialPosition?.x ?? position.x,
+                    y: initialPosition?.y ?? position.y,
                     fill: fillColor,
                     stroke: borderColor,
                 }}
@@ -96,7 +102,7 @@ export const RectIt: FC<RectProps> = ({
                     fontWeight="bold"
                     fontSize={textSize ?? size.height / 4}
                 >
-                    {name}
+                    {text ?? name}
                 </Text>
             </motion.g>
         </>

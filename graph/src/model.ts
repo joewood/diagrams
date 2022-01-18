@@ -1,19 +1,15 @@
+import { intersection } from "lodash";
+import { Body } from "ngraph.forcelayout";
+import { Link } from "ngraph.graph";
+
 export interface Size {
     width: number;
     height: number;
 }
 
-export interface Size3 extends Size {
-    depth: number;
-}
-
 export interface Point {
     x: number;
     y: number;
-}
-
-export interface Point3 extends Point {
-    z: number;
 }
 
 /** Node model */
@@ -26,17 +22,9 @@ export interface GraphNode {
     /** non-default size of node */
     size?: Size;
     /** Name of parent node if hierarchical */
-    parent?: string;
+    parent: string | null;
     /** Hierarchical level hint. If no children then level: 1 */
-    level?: number;
-}
-
-/** Node model */
-export interface GraphNode3 extends GraphNode {
-    /** hinted start position */
-    positionHint?: Point3;
-    /** non-default size of node */
-    size?: Size3;
+    // level?: number;
 }
 
 export interface GraphEdge {
@@ -54,37 +42,32 @@ export interface LayoutNode extends GraphNode {
     name: string;
     size: Size;
     position: Point;
+    body?: Body;
+    levelNumber?: number;
 }
 
-export interface LayoutNode3 extends LayoutNode {
-    size: Size3;
-    position: Point3;
+export interface Visible {
+    visible: boolean;
 }
+
+export type GraphNodeVisible = GraphNode & Visible;
+export type LayoutNodeVisible = LayoutNode & Visible;
 
 export interface LayoutEdge extends GraphEdge {
     name: string;
     points: Point[];
+    link: Link<GraphEdge>;
     hide?: boolean;
 }
 
-export interface LayoutEdge3 extends LayoutEdge {
-    points: Point3[];
-}
-
 export interface Layout {
-    nodes: LayoutNode[];
+    nodes: (LayoutNode & Visible)[];
     edges: LayoutEdge[];
+    tree: { [index: string]: LayoutNodeVisible[] };
     minPoint: Point;
     maxPoint: Point;
-    expanded: string[];
+    // expanded?: string[];
     textSize: number;
-}
-
-export interface Layout3 extends Layout {
-    nodes: LayoutNode3[];
-    edges: LayoutEdge3[];
-    minPoint: Point3;
-    maxPoint: Point3;
 }
 
 const abs = Math.abs;
@@ -105,8 +88,9 @@ export function getAnchor(nodePosition: Point, nodeSize: Size, fromPoint: Point)
     }
 }
 
-export function minMax(nodes: LayoutNode[], padding = 0): { x1: number; x2: number; y1: number; y2: number } {
-    return nodes.reduce(
+/** Calculates the containing rectangle of a set of Nodes */
+export function getContainingRect(nodes: LayoutNode[], padding = 0): { position: Point; size: Size } {
+    const minMax = nodes.reduce(
         (p, c) => ({
             x1: Math.min(p.x1, c.position.x - c.size.width / 2 - padding),
             y1: Math.min(p.y1, c.position.y - c.size.height / 2 - padding),
@@ -120,20 +104,35 @@ export function minMax(nodes: LayoutNode[], padding = 0): { x1: number; x2: numb
             y2: Number.MIN_SAFE_INTEGER,
         }
     );
+    return {
+        position: { x: minMax.x1, y: minMax.y1 },
+        size: { width: minMax.x2 - minMax.x1, height: minMax.y2 - minMax.y1 },
+    };
 }
 
 export function getMidPoint(from: number, to: number, delta: number) {
     return (to - from) * delta + from;
 }
 
-export function calculateDistance(edge: GraphEdge, node1: GraphNode, node2: GraphNode): number {
+export function calculateDistance(
+    edge: GraphEdge,
+    nodeDict: Record<string, GraphNode>,
+    node1: GraphNode,
+    node2: GraphNode
+): number {
     if (edge.hierarchical) return 5;
-    if (!node1.parent || !node2.parent) return 30;
-    // if linked to a virtual level 2 node
-    // if siblings
-    if (node1.parent === node2.parent) return 25;
-    if (node1.parent !== node2.parent) return 40;
-    return 35;
+    const path1: string[] = [];
+    while (!!node1?.parent) {
+        path1.push(node1.parent);
+        node1 = nodeDict[node1.parent];
+    }
+    const path2: string[] = [];
+    while (!!node2?.parent) {
+        path2.push(node2.parent);
+        node2 = nodeDict[node2.parent];
+    }
+    const distance = path1.length + path2.length - intersection(path1, path2).length;
+    return Math.max(Math.pow(2, distance) * 10, 20);
 }
 
 export const transition = {

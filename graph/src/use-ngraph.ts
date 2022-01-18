@@ -1,87 +1,49 @@
-import { countBy, keyBy } from "lodash";
+import { groupBy, uniq } from "lodash";
 import createLayout from "ngraph.forcelayout";
-import createGraph, { Link } from "ngraph.graph";
-import { useMemo } from "react";
+import { Graph, Link } from "ngraph.graph";
+import { useCallback, useMemo } from "react";
 import {
-    calculateDistance,
     getAnchor,
+    getContainingRect,
     getMidPoint,
     GraphEdge,
     GraphNode,
+    GraphNodeVisible,
     Layout,
     LayoutEdge,
     LayoutNode,
-    minMax,
+    LayoutNodeVisible,
     Size,
+    Visible,
 } from "./model";
+import {
+    getAllChildren,
+    trickleUpMass,
+    useChildrenNodesByParent,
+    useGraph,
+    useVisibleNodes,
+} from "./use-ngraph-structure";
 
-interface GraphOptions {
+interface UseNGraphOptions {
     /** Default size of all nodes */
     defaultSize?: Size;
     /** Number of iterations */
     iterations?: number;
-    /** List of Node names that are expanded (if they have children) */
-    expanded?: string[];
+    textSize?: number;
 }
 
-export function useNgraph(
-    nodes: GraphNode[],
-    edges: GraphEdge[],
-    { expanded = [], defaultSize = { width: 12, height: 8 }, iterations = 100 }: GraphOptions
-): Layout {
-    const textSize = 2;
-    const positioned = useMemo(() => {
-        const nodeDict = keyBy(nodes, (n) => n.name);
-
-        const graph = createGraph<GraphNode, GraphEdge>({ multigraph: true });
-        const nodeAlias: Record<string, string> = {};
-        const nodeParentToChildren: Record<string, string[]> = {};
-        for (const node of nodes) {
-            // level 2 nodes get included unless they're expanded
-            if (node.level === 2) {
-                graph.addNode(node.name, node);
-                nodeAlias[node.name] = node.name;
-            } else {
-                // leaf nodes get expanded only if the parent is expanded
-                if (node.parent && expanded.includes(node.parent)) {
-                    graph.addNode(node.name, node);
-                    nodeAlias[node.name] = node.name;
-                    // add a link to all existing nodes with this parent
-                    nodeParentToChildren[node.parent] = [...(nodeParentToChildren[node.parent] || []), node.name];
-                } else {
-                    if (node.parent) nodeAlias[node.name] = node.parent;
-                }
-            }
-        }
-        const allLinks: Link<GraphEdge>[] = [];
-        // Add links between nodes, using the aliases from above, which covers which nodes are expanded
-        for (const edge of edges) {
-            if (nodeAlias[edge.from] !== nodeAlias[edge.to]) {
-                edge.score = calculateDistance(edge, nodeDict[nodeAlias[edge.from]], nodeDict[nodeAlias[edge.to]]);
-                allLinks.push(graph.addLink(nodeAlias[edge.from], nodeAlias[edge.to], edge));
-                const parent = nodeDict[edge.from]?.parent;
-                // if sibling with the same parent, then remove the from node from the nodeParentToChildren list
-                if (parent && nodeParentToChildren[parent] && parent === nodeDict[edge.to]?.parent) {
-                    nodeParentToChildren[parent] = nodeParentToChildren[parent].filter((p) => p !== edge.from);
-                }
-            }
-        }
-        for (const parent of Object.keys(nodeParentToChildren)) {
-            for (const first of nodeParentToChildren[parent]) {
-                const edge: GraphEdge = { from: first, to: parent, hierarchical: true };
-                edge.score = calculateDistance(edge, nodeDict[first], nodeDict[parent]);
-                allLinks.push(graph.addLink(first, parent, edge));
-            }
-        }
-        // for (const node of nodes) {
-        //     if (node.parent && expanded.includes(node.parent))
-        //         graph.addLink(node.name, node.parent, { from: node.name, to: node.parent, hierarchical: true });
-        // }
-
+function useLayout<T extends Graph>(
+    graph: T,
+    allLinks: Link<GraphEdge>[],
+    leafNodes: GraphNodeVisible[],
+    visibleNodesDict: Record<string, GraphNodeVisible>,
+    iterations: number
+) {
+    return useMemo(() => {
         // Do the LAYOUT
         const layout = createLayout(graph, {
             dimensions: 2,
-            gravity: -30,
+            gravity: -40,
             springLength: 35,
         });
         for (const link of allLinks) {
@@ -91,60 +53,161 @@ export function useNgraph(
                 spring.length = link.data.score;
             }
         }
-        for (const parent of Object.keys(nodeParentToChildren)) {
-            for (const node of nodeParentToChildren[parent]) {
-                const spring = layout.getSpring(node, parent);
-                if (!!spring) spring.length = 25;
-            }
-        }
-        const childCountByParent = countBy(nodes, (n) => n.parent);
-        for (const parent of expanded) {
-            const body = layout.getBody(parent);
-            if (!!body && childCountByParent[parent]) body.mass = 5 * childCountByParent[parent];
-        }
-        for (let i = 0; i < iterations; ++i) layout.step();
-        const layoutNodes: LayoutNode[] = [];
-
         layout.forEachBody((body, key, dict) => {
-            if (nodeDict[key])
-                layoutNodes.push({
-                    ...nodeDict[key],
-                    size: nodeDict[key].size ?? defaultSize,
-                    level: nodeDict[key].level,
-                    position: layout.getNodePosition(key),
-                });
+            body.mass = 5;
         });
-        const layoutEdges: LayoutEdge[] = [];
-        graph.forEachLink((link) => {
-            if (link.data.hierarchical) return;
-            const fromPos = layout.getNodePosition(link.fromId);
-            const toPos = layout.getNodePosition(link.toId);
-            const fromNode = graph.getNode(link.fromId)?.data!;
-            const toNode = graph.getNode(link.toId)?.data!;
-            if (!fromNode || !toNode) console.error("Cannot find node for ", link);
-            const midPoint = { x: getMidPoint(fromPos.x, toPos.x, 0.5), y: getMidPoint(fromPos.y, toPos.y, 0.5) };
-            const fromPoint = getAnchor(fromPos, fromNode.size ?? defaultSize, toPos);
-            const toPoint = getAnchor(toPos, toNode.size ?? defaultSize, fromPos);
-            layoutEdges.push({
-                ...link.data,
-                name: `${link.data.from} -> ${link.data.to}`,
-                from: link.fromId as string,
-                to: link.toId as string,
-                points: [fromPoint, midPoint, toPoint],
-            });
+        leafNodes.forEach((n) => trickleUpMass(visibleNodesDict, layout, n));
+        for (let i = 0; i < iterations; ++i) layout.step();
+        return layout;
+    }, [allLinks, graph, iterations, leafNodes, visibleNodesDict]);
+}
+
+function resizeNodeTree(
+    leafNodes: GraphNodeVisible[],
+    visibleNodesDict: Record<string, GraphNodeVisible>,
+    layoutNodesDict: Record<string, LayoutNode>,
+    childrenNodesByParent: Record<string, GraphNode[]>,
+    options: UseNGraphOptions
+) {
+    let treeLayer = leafNodes.map((l) => l.name);
+    let levelNumber = 1;
+    while (treeLayer.length > 0) {
+        treeLayer = treeLayer
+            .filter((l) => visibleNodesDict[l].visible)
+            .map((l) => visibleNodesDict[l].parent)
+            .filter(Boolean) as string[];
+        for (const nodeName of treeLayer) {
+            // console.log(
+            // getAllChildren(childrenNodesByParent, visibleNodesDict, nodeName).map((v) => layoutNodesDict[v])
+            // );
+            const newPosSize = getContainingRect(
+                getAllChildren(childrenNodesByParent, visibleNodesDict, nodeName).map((v) => layoutNodesDict[v]),
+                options.textSize
+            );
+            layoutNodesDict[nodeName].position = {
+                x: newPosSize.position.x + newPosSize.size.width / 2,
+                y: newPosSize.position.y + newPosSize.size.height / 2,
+            };
+            layoutNodesDict[nodeName].size = newPosSize.size;
+            layoutNodesDict[nodeName].levelNumber = levelNumber;
+        }
+        levelNumber++;
+    }
+}
+
+function loadUpNodes(
+    visibleNodesDict: Record<string, GraphNodeVisible>,
+
+    layout: ReturnType<typeof createLayout>,
+    options: UseNGraphOptions
+) {
+    const layoutNodes: (LayoutNode & Visible)[] = [];
+
+    // DONE LAYOUT - NOW LOAD UP
+    const layoutNodesDict: Record<string, LayoutNode> = {};
+    layout.forEachBody((body, key, dict) => {
+        if (visibleNodesDict[key].visible) {
+            const v: LayoutNodeVisible = {
+                ...visibleNodesDict[key],
+                body,
+                size: visibleNodesDict[key].size ?? options.defaultSize,
+                position: layout.getNodePosition(key),
+            };
+            layoutNodes.push(v);
+            layoutNodesDict[key] = v;
+        }
+    });
+    return { layoutNodes, layoutNodesDict };
+}
+
+function loadUpEdges<T extends Graph>(graph: T, layout: ReturnType<typeof createLayout>, options: UseNGraphOptions) {
+    const layoutEdges: LayoutEdge[] = [];
+    graph.forEachLink((link) => {
+        // if (link.data.hierarchical) return;
+        const fromPos = layout.getNodePosition(link.fromId);
+        const toPos = layout.getNodePosition(link.toId);
+        const fromNode = graph.getNode(link.fromId)?.data!;
+        if (!fromNode) {
+            console.error("Cannot find FROM node for ", link.fromId);
+            return;
+        }
+        const toNode = graph.getNode(link.toId)?.data!;
+        if (!toNode) {
+            console.error("Cannot find TO node for ", link.toId);
+            return;
+        }
+        const midPoint = { x: getMidPoint(fromPos.x, toPos.x, 0.5), y: getMidPoint(fromPos.y, toPos.y, 0.5) };
+        const fromPoint = getAnchor(fromPos, fromNode.size ?? options.defaultSize, toPos);
+        const toPoint = getAnchor(toPos, toNode.size ?? options.defaultSize, fromPos);
+        layoutEdges.push({
+            ...link.data,
+            name: `${link.data.from} -> ${link.data.to}`,
+            from: link.fromId as string,
+            to: link.toId as string,
+            points: [fromPoint, midPoint, toPoint],
+            hide: link.data.hierarchical,
+            link,
         });
+    });
+    return layoutEdges;
+}
+
+function useLoadUp<T extends Graph>(
+    graph: T,
+    leafNodes: GraphNodeVisible[],
+    layout: ReturnType<typeof createLayout>,
+    visibleNodesDict: Record<string, GraphNodeVisible>,
+    childrenNodesByParent: Record<string, GraphNode[]>,
+    options: UseNGraphOptions
+) {
+    return useMemo<[LayoutNodeVisible[], LayoutEdge[]]>(() => {
+        const { layoutNodes, layoutNodesDict } = loadUpNodes(visibleNodesDict, layout, options);
+        resizeNodeTree(leafNodes, visibleNodesDict, layoutNodesDict, childrenNodesByParent, options);
+        const layoutEdges = loadUpEdges(graph, layout, options);
+        return [layoutNodes, layoutEdges];
+    }, [childrenNodesByParent, graph, layout, leafNodes, options, visibleNodesDict]);
+}
+
+export function useNgraph(
+    nodes: GraphNode[],
+    edges: GraphEdge[],
+    expanded: string[] | null = null,
+    { defaultSize = { width: 12, height: 8 }, iterations = 100, textSize = 2, ...other }: UseNGraphOptions
+): Layout {
+    const options = useMemo(
+        () => ({ ...other, defaultSize, iterations, textSize }),
+        [defaultSize, iterations, textSize, other]
+    );
+    const { childrenNodesByParent } = useChildrenNodesByParent(nodes);
+    const { visibleNodes, visibleNodesDict, getVisibleNode, leafNodes } = useVisibleNodes(
+        nodes,
+        childrenNodesByParent,
+        expanded
+    );
+    const { graph, allLinks } = useGraph(visibleNodes, childrenNodesByParent, getVisibleNode, edges, visibleNodesDict);
+    const layout = useLayout(graph, allLinks, leafNodes, visibleNodesDict, iterations);
+    const [layoutNodes, layoutEdges] = useLoadUp(
+        graph,
+        leafNodes,
+        layout,
+        visibleNodesDict,
+        childrenNodesByParent,
+        options
+    );
+    const positioned = useMemo(() => {
         // TODO - raise issue the type is wrong in ngraph.layout
-        const { x1, x2, y1, y2 } = minMax(layoutNodes, textSize);
-        const width = Math.max(50, x2 - x1);
-        const height = Math.max(40, y2 - y1);
+        const { position, size } = getContainingRect(layoutNodes, options.textSize);
+        const width = Math.max(50, size.width);
+        const height = Math.max(40, size.height);
         return {
             nodes: layoutNodes,
             edges: layoutEdges,
-            minPoint: { x: x1 - textSize, y: y1 - textSize },
-            maxPoint: { x: x1 + width + textSize, y: y1 + height + textSize },
+            minPoint: { x: position.x - options.textSize, y: position.y - options.textSize },
+            maxPoint: { x: position.x + width + options.textSize, y: position.y + height + options.textSize },
+            tree: groupBy(layoutNodes, (n) => n.parent || ""),
             expanded,
-            textSize,
+            textSize: options.textSize,
         };
-    }, [nodes, edges, expanded, iterations, defaultSize]);
+    }, [layoutNodes, options.textSize, layoutEdges, expanded]);
     return positioned;
 }
