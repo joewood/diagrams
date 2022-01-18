@@ -67,7 +67,7 @@ function resizeNodeTree(
     visibleNodesDict: Record<string, GraphNodeVisible>,
     layoutNodesDict: Record<string, LayoutNode>,
     childrenNodesByParent: Record<string, GraphNode[]>,
-    options: UseNGraphOptions
+    options: Required<UseNGraphOptions>
 ) {
     let treeLayer = leafNodes.map((l) => l.name);
     let levelNumber = 1;
@@ -97,9 +97,8 @@ function resizeNodeTree(
 
 function loadUpNodes(
     visibleNodesDict: Record<string, GraphNodeVisible>,
-
     layout: ReturnType<typeof createLayout>,
-    options: UseNGraphOptions
+    options: Required<UseNGraphOptions>
 ) {
     const layoutNodes: (LayoutNode & Visible)[] = [];
 
@@ -120,7 +119,11 @@ function loadUpNodes(
     return { layoutNodes, layoutNodesDict };
 }
 
-function loadUpEdges<T extends Graph>(graph: T, layout: ReturnType<typeof createLayout>, options: UseNGraphOptions) {
+function loadUpEdges<T extends Graph>(
+    graph: T,
+    layout: ReturnType<typeof createLayout>,
+    options: Required<UseNGraphOptions>
+) {
     const layoutEdges: LayoutEdge[] = [];
     graph.forEachLink((link) => {
         // if (link.data.hierarchical) return;
@@ -158,7 +161,7 @@ function useLoadUp<T extends Graph>(
     layout: ReturnType<typeof createLayout>,
     visibleNodesDict: Record<string, GraphNodeVisible>,
     childrenNodesByParent: Record<string, GraphNode[]>,
-    options: UseNGraphOptions
+    options: Required<UseNGraphOptions>
 ) {
     return useMemo<[LayoutNodeVisible[], LayoutEdge[]]>(() => {
         const { layoutNodes, layoutNodesDict } = loadUpNodes(visibleNodesDict, layout, options);
@@ -174,7 +177,7 @@ export function useNgraph(
     expanded: string[] | null = null,
     { defaultSize = { width: 12, height: 8 }, iterations = 100, textSize = 2, ...other }: UseNGraphOptions
 ): Layout {
-    const options = useMemo(
+    const options = useMemo<Required<UseNGraphOptions>>(
         () => ({ ...other, defaultSize, iterations, textSize }),
         [defaultSize, iterations, textSize, other]
     );
