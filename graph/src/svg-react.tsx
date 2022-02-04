@@ -13,29 +13,34 @@ interface RectProps {
     fillColor?: string;
     borderColor?: string;
     textColor?: string;
-    textSize?: number;
-    text?:string;
+    textSize?: number | string;
+    text?: string;
     verticalAnchor?: "start" | "end" | "middle";
+    filter?: string;
     onSelectNode?: (args: { name: string }) => void;
 }
 
-export const RectIt: FC<RectProps> = ({
+export const TextBox: FC<RectProps> = ({
     name,
     initialPosition,
     initialSize,
     position,
     size,
-    fillColor = "rgba(0,0,255,0.2)",
+    fillColor = "transparent",
     borderColor = "white",
-    textColor = "white",
+    textColor = "black",
     verticalAnchor = "middle",
     textSize,
     text,
+    filter,
     onSelectNode,
 }) => {
     const onClick = useCallback(() => {
         if (onSelectNode) onSelectNode({ name });
     }, [onSelectNode, name]);
+    const textSizeDefaulted = textSize ?? size.height / 4;
+    const initialSizeDefaulted = initialSize ?? size;
+    const initialPositionDefaulted = initialPosition ?? position;
     return (
         <>
             <motion.g
@@ -43,19 +48,17 @@ export const RectIt: FC<RectProps> = ({
                 layoutId={name}
                 initial={{
                     opacity: 0,
-                    width: initialSize?.width ?? size.width,
-                    height: initialSize?.height ?? size.height,
-                    x: initialPosition?.x ?? position.x,
-                    y: initialPosition?.y ?? position.y,
+                    width: initialSizeDefaulted.width,
+                    height: initialSizeDefaulted.height,
+                    x: initialPositionDefaulted.x - initialSizeDefaulted.width / 2,
+                    y: initialPositionDefaulted.y - initialSizeDefaulted.height / 2,
                     fill: fillColor,
                     stroke: borderColor,
                 }}
                 animate={{
                     opacity: 1,
-                    width: size.width,
-                    height: size.height,
-                    x: position.x,
-                    y: position.y,
+                    x: position.x - size.width / 2,
+                    y: position.y - size.height / 2,
                     fill: fillColor,
                     stroke: borderColor,
                 }}
@@ -65,42 +68,42 @@ export const RectIt: FC<RectProps> = ({
                     layoutId={name + "-rect"}
                     initial={{
                         opacity: 0,
-                        width: size.width,
-                        height: size.height,
+                        width: initialSizeDefaulted.width,
+                        height: initialSizeDefaulted.height,
                         fill: fillColor,
-                        x: size.width * -0.5,
-                        y: size.height * -0.5,
                         stroke: borderColor,
-                        rx: size.width / 20,
-                        ry: size.height / 20,
+                        rx: initialSizeDefaulted.width / 20,
+                        ry: initialSizeDefaulted.height / 20,
                     }}
                     animate={{
                         opacity: 1,
                         width: size.width,
                         height: size.height,
                         fill: fillColor,
-                        x: size.width * -0.5,
-                        y: size.height * -0.5,
                         stroke: borderColor,
                         rx: size.width / 20,
                         ry: size.height / 20,
                     }}
+                    x={0}
+                    y={0}
                     transition={transition}
                     fill={fillColor}
+                    filter={filter}
                     stroke={borderColor}
-                    strokeWidth={0.2}
+                    strokeWidth={1}
                     onClick={onClick}
                 />
                 <Text
                     style={{ fill: textColor, strokeWidth: 0, userSelect: "none" }}
-                    textAnchor="middle"
-                    dx={0}
-                    dy={0}
-                    width={size.width * 0.9}
-                    height={size.height * 0.9}
-                    verticalAnchor={verticalAnchor}
+                    textAnchor="start"
+                    verticalAnchor="start"
+                    x={size.width / 20}
+                    y={size.height / 20}
+                    width={size.width - (size.width * 4) / 20}
+                    height={size.height - (size.height * 4) / 20}
+                    fontSize={textSizeDefaulted}
                     fontWeight="bold"
-                    fontSize={textSize ?? size.height / 4}
+                    onClick={onClick}
                 >
                     {text ?? name}
                 </Text>

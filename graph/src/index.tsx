@@ -1,4 +1,5 @@
-export { Graph } from "./graph";
-export type { GraphProps } from "./graph"
-export type { GraphNode, GraphEdge } from "./model";
-export { useNgraph } from "./use-ngraph";
+export { SimpleGraph } from "./simple-graph";
+export { ExpandableGraph } from "./expandable-graph";
+export type { SimpleEdge, SimpleNode, HierarchicalNode, GraphOptions, RequiredGraphOptions } from "./model";
+export type { UseNGraphOptions } from "./use-ngraph";
+export { useSimpleGraph } from "./use-ngraph-simple";

@@ -2,16 +2,16 @@ import { groupBy, keyBy } from "lodash";
 import createLayout from "ngraph.forcelayout";
 import createGraph, { Link } from "ngraph.graph";
 import { useCallback, useMemo } from "react";
-import { calculateDistance, GraphEdge, GraphNode, GraphNodeVisible } from "./model";
+import { calculateDistance, HierarchicalEdge, HierarchicalNode, GraphNodeVisible, Size } from "./model";
 
 /** Simply group nodes by their parent, null means no parent */
-export function useChildrenNodesByParent(nodes: GraphNode[]) {
-    const childrenNodesByParent = useMemo<Record<string, GraphNode[]>>(
+export function useChildrenNodesByParent(nodes: HierarchicalNode[]) {
+    const childrenNodesByParent = useMemo<Record<string, HierarchicalNode[]>>(
         () => groupBy(nodes, (node) => node.parent),
         [nodes]
     );
     const nodesDict = keyBy(nodes, (n) => n.name);
-    return { childrenNodesByParent, nodesDict };
+    return [childrenNodesByParent, nodesDict ] as [Record<string,HierarchicalNode[]>,Record<string,HierarchicalNode>];
 }
 
 /** Properties of the visible Graph */
@@ -28,8 +28,8 @@ interface UseVisibleNodesResult {
 
 /** Return the graph structure that is dependent on what is hierarchically visible */
 export function useVisibleNodes(
-    nodes: GraphNode[],
-    nodeChildrenByParent: Record<string, GraphNode[]>,
+    nodes: HierarchicalNode[],
+    nodeChildrenByParent: Record<string, HierarchicalNode[]>,
     expanded: string[] | null
 ): UseVisibleNodesResult {
     const visibleNodes: GraphNodeVisible[] = useMemo(
@@ -67,7 +67,7 @@ export function useVisibleNodes(
 
 /** Returns the node names of all the children in the tree */
 export function getAllChildren(
-    childrenNodesByParent: Record<string, GraphNode[]>,
+    childrenNodesByParent: Record<string, HierarchicalNode[]>,
     visibleNodesDict: Record<string, GraphNodeVisible>,
     nodeName: string
 ): string[] {
@@ -82,7 +82,7 @@ export function getAllChildren(
 export function trickleUpMass(
     visibleNodesDict: Record<string, GraphNodeVisible>,
     layout: ReturnType<typeof createLayout>,
-    node: GraphNode
+    node: HierarchicalNode
 ) {
     // Given a leaf node, trickly the mass up through the visible nodes
     if (!node.parent) return;
@@ -95,16 +95,17 @@ export function trickleUpMass(
 
 export function useGraph(
     visibleNodes: GraphNodeVisible[],
-    childrenNodesByParent: Record<string, GraphNode[]>,
+    childrenNodesByParent: Record<string, HierarchicalNode[]>,
     getVisibleNode: (name: string) => GraphNodeVisible,
-    edges: GraphEdge[],
-    visibleNodesDict: Record<string, GraphNodeVisible>
+    edges: HierarchicalEdge[],
+    visibleNodesDict: Record<string, GraphNodeVisible>,
+    defaultSize: Size
 ) {
     const { graph, allLinks } = useMemo(() => {
-        const graph = createGraph<GraphNode, GraphEdge>({ multigraph: true });
+        const graph = createGraph<HierarchicalNode, HierarchicalEdge>({ multigraph: true });
         visibleNodes.forEach((node) => graph.addNode(node.name, node));
 
-        const allLinks: Link<GraphEdge>[] = [];
+        const allLinks: Link<HierarchicalEdge>[] = [];
         // Add links between nodes, using the aliases from above, which covers which nodes are expanded
         for (const edge of edges) {
             if (getVisibleNode(edge.from) !== getVisibleNode(edge.to)) {
@@ -112,14 +113,10 @@ export function useGraph(
                     edge,
                     visibleNodesDict,
                     getVisibleNode(edge.from),
-                    getVisibleNode(edge.to)
+                    getVisibleNode(edge.to),
+                    defaultSize
                 );
                 allLinks.push(graph.addLink(getVisibleNode(edge.from)?.name, getVisibleNode(edge.to)?.name, edge));
-                // const parent = visibleNodesDict[edge.from]?.parent;
-                // if sibling with the same parent, then remove the from node from the nodeParentToChildren list
-                // if (parent && childrenNodesByParent[parent] && parent === visibleNodesDict[edge.to]?.parent) {
-                //     childrenNodesByParent[parent] = childrenNodesByParent[parent].filter((p) => p.name !== edge.from);
-                // }
             }
         }
         for (const parent of Object.keys(childrenNodesByParent)) {
@@ -127,17 +124,17 @@ export function useGraph(
             for (const child of childrenNodesByParent[parent]) {
                 if (!visibleNodesDict[child.name] || !visibleNodesDict[child.name].visible) continue;
                 const c = visibleNodesDict[child.name];
-                const edge: GraphEdge = {
+                const edge: HierarchicalEdge = {
                     from: child.name,
                     to: parent,
                     label: `${parent} to ${c.name}`,
                     hierarchical: true,
                 };
-                edge.score = calculateDistance(edge, visibleNodesDict, child, visibleNodesDict[parent]);
+                edge.score = calculateDistance(edge, visibleNodesDict, child, visibleNodesDict[parent], defaultSize);
                 allLinks.push(graph.addLink(child.name, parent, edge));
             }
         }
         return { graph, allLinks };
-    }, [childrenNodesByParent, edges, getVisibleNode, visibleNodes, visibleNodesDict]);
+    }, [childrenNodesByParent, defaultSize, edges, getVisibleNode, visibleNodes, visibleNodesDict]);
     return { graph, allLinks };
 }
