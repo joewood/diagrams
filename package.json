@@ -1,6 +1,6 @@
 {
    "name": "@diagrams/main",
-   "version": "0.1.1",
+   "version": "0.1.2",
    "private": true,
    "homepage": "https://joewood.github.io/dag-3d",
    "workspaces": [
@@ -11,7 +11,9 @@
       "typescript": "latest"
    },
    "dependencies": {
-      "concurrently": "^7.0.0"
+      "concurrently": "^7.0.0",
+      "react": "^17.0.2",
+      "react-dom": "^17.0.2"
    },
    "scripts": {
       "start": "concurrently --kill-others -n graph,example npm:start-graph npm:start-example",
