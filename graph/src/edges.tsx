@@ -2,45 +2,32 @@ import { motion } from "framer-motion";
 import { keyBy } from "lodash";
 import * as React from "react";
 import { memo, useMemo } from "react";
-import {
-    getAnchor,
-    getMidPoint,
-    Point,
-    PositionedEdge,
-    PositionedNode,
-    RequiredGraphOptions,
-    Size,
-    transition,
-} from "./model";
+import { getAnchor, getMidPoint, PositionedEdge, RequiredGraphOptions, transition } from "./model";
+import { AbsolutePositionedNode } from "./use-ngraph";
 
 interface Props {
-    nodes: Record<string, PositionedNode>;
+    nodes: Record<string, AbsolutePositionedNode>;
     edges: PositionedEdge[];
-    targetSize: Size;
-    targetOffset?: Point;
     name: string;
     options: Pick<RequiredGraphOptions, "defaultSize" | "textSize" | "iterations">;
 }
 
-export const Edges = memo<Props>(({ edges, nodes, targetSize: targetArea, options }) => {
+export const Edges = memo<Props>(({ edges, nodes, options }) => {
     // get the containing rectangle
-    // const [virtualTopLeft, virtualSize] = useContainingRect(targetArea, nodes, options.textSize);
     // adjust the position of the nodes to fit within the targetArea
     const nodesDict = useMemo(() => keyBy(nodes, (n) => n.name), [nodes]);
     const layoutEdges = useMemo(
         () =>
             edges
                 .map((e) => {
-                    const ndFrom = nodesDict[e.from];
-                    const ndTo = nodesDict[e.to];
-                    if (!ndFrom || !ndTo) {
+                    const nodeFrom = nodesDict[e.from];
+                    const nodeTo = nodesDict[e.to];
+                    if (!nodeFrom || !nodeTo) {
                         console.warn("cannot find nodes from edge", e);
                         return null;
                     }
-                    const _fromPoint = (ndFrom as unknown as any).absolutePosition;
-                    const _toPoint = (ndTo as unknown as any).absolutePosition;
-                    // const fromPos = adjustPosition(e.fromNode.position, virtualTopLeft, virtualSize, targetArea);
-                    // const toPos = adjustPosition(e.toNode.position, virtualTopLeft, virtualSize, targetArea);
+                    const _fromPoint = nodeFrom.absolutePosition;
+                    const _toPoint = nodeTo.absolutePosition;
                     const midPoint = {
                         x: getMidPoint(_fromPoint.x, _toPoint.x, 0.5),
                         y: getMidPoint(_fromPoint.y, _toPoint.y, 0.5),
@@ -50,7 +37,6 @@ export const Edges = memo<Props>(({ edges, nodes, targetSize: targetArea, option
                     return { ...e, points: [fromPoint, midPoint, toPoint] };
                 })
                 .filter((e) => e !== null),
-
         [edges, nodesDict, options.defaultSize]
     );
 
@@ -60,10 +46,10 @@ export const Edges = memo<Props>(({ edges, nodes, targetSize: targetArea, option
                 (edge) =>
                     edge && (
                         <motion.path
-                            key={edge!.name}
-                            layoutId={edge!.name}
+                            key={edge.name}
+                            layoutId={edge.name}
                             initial={{
-                                d: `M ${edge!.points[0].x},${edge!.points[0].y} L ${edge!.points[2].x},${
+                                d: `M ${edge.points[0].x},${edge.points[0].y} L ${edge.points[2].x},${
                                     edge!.points[2].y
                                 }`,
                                 opacity: 0,

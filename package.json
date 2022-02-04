@@ -1,6 +1,6 @@
 {
    "name": "@diagrams/main",
-   "version": "0.1.2",
+   "version": "0.1.4",
    "private": true,
    "homepage": "https://joewood.github.io/dag-3d",
    "workspaces": [

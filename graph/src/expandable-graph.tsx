@@ -4,11 +4,11 @@ import * as React from "react";
 import { FC, useCallback, useMemo } from "react";
 import { HierarchicalNode } from ".";
 import { Edges } from "./edges";
-import { MiniGraph, useChanged, useEdges } from "./mini-graph";
+import { MiniGraph,  } from "./mini-graph";
 import { GraphOptions, HierarchicalEdge, PositionedNode, SimpleNode, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useChildrenNodesByParent, useDefaultOptions } from "./use-ngraph";
+import { useChildrenNodesByParent, useDefaultOptions, useEdges } from "./use-ngraph";
 
 interface GraphProps {
     nodes: HierarchicalNode[];
@@ -32,11 +32,11 @@ function getVisibleNode(
 }
 
 export const ExpandableGraph: FC<GraphProps> = ({ edges, nodes, onSelectNode, expanded, options: _options = {} }) => {
-    useChanged("edges", edges);
-    useChanged("nodes", nodes);
-    useChanged("onSelectNode", onSelectNode);
-    useChanged("expanded", expanded);
-    useChanged("options", _options);
+    // useChanged("edges", edges);
+    // useChanged("nodes", nodes);
+    // useChanged("onSelectNode", onSelectNode);
+    // useChanged("expanded", expanded);
+    // useChanged("options", _options);
 
     const options = useDefaultOptions(_options);
     const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
@@ -121,8 +121,6 @@ export const ExpandableGraph: FC<GraphProps> = ({ edges, nodes, onSelectNode, ex
                     name="root"
                     edges={posEdges}
                     nodes={posNodesDict}
-                    targetSize={targetSize}
-                    targetOffset={zeroPoint}
                     options={options}
                 />
             </SvgContainer>

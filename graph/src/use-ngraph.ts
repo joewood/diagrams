@@ -1,10 +1,13 @@
 import { groupBy, keyBy } from "lodash";
 import createLayout, { Vector } from "ngraph.forcelayout";
 import createGraph, { Link } from "ngraph.graph";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { MiniGraphProps } from "./mini-graph";
 import {
     getContainingRect,
-    GraphOptions, HierarchicalNode, NGraph,
+    GraphOptions,
+    HierarchicalNode,
+    NGraph,
     NGraphLayout,
     Point,
     PositionedEdge,
@@ -13,9 +16,33 @@ import {
     SimpleEdge,
     SimpleNode,
     Size,
-    zeroPoint
+    zeroPoint,
 } from "./model";
 
+export function useChanged<T>(name: string, x: T) {
+    useEffect(() => console.log(`${name} changed.`), [x, name]);
+}
+
+export type AbsolutePositionedNode = PositionedNode & {
+    absolutePosition: Point;
+};
+
+export function useEdges() {
+    const [posEdges, setEdges] = useState<PositionedEdge[]>([]);
+    const [posNodes, setNodes] = useState<Record<string, AbsolutePositionedNode>>({});
+    const onNodesMoved = useCallback<MiniGraphProps["onNodesPositioned"]>((edges, nodes) => {
+        setEdges(edges);
+        setNodes((nd) => {
+            const x = { ...nd, ...nodes };
+            return x;
+        });
+    }, []);
+    return [posNodes, posEdges, onNodesMoved] as [
+        Record<string, AbsolutePositionedNode>,
+        PositionedEdge[],
+        MiniGraphProps["onNodesPositioned"]
+    ];
+}
 
 /** Simply group nodes by their parent, null means no parent */
 export function useChildrenNodesByParent(nodes: HierarchicalNode[]) {
@@ -24,10 +51,8 @@ export function useChildrenNodesByParent(nodes: HierarchicalNode[]) {
         [nodes]
     );
     const nodesDict = keyBy(nodes, (n) => n.name);
-    return [childrenNodesByParent, nodesDict ] as [Record<string,HierarchicalNode[]>,Record<string,HierarchicalNode>];
+    return [childrenNodesByParent, nodesDict] as [Record<string, HierarchicalNode[]>, Record<string, HierarchicalNode>];
 }
-
-
 
 function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2: Point, bottomRight2: Point) {
     if (topLeft1.x > bottomRight2.x || topLeft2.x > bottomRight1.x) {

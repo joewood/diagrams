@@ -1,11 +1,11 @@
 import * as React from "react";
 import { FC } from "react";
 import { Edges } from "./edges";
-import { MiniGraph, useChanged, useEdges } from "./mini-graph";
+import { MiniGraph } from "./mini-graph";
 import { GraphOptions, SimpleEdge, SimpleNode, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useDefaultOptions } from "./use-ngraph";
+import { useDefaultOptions, useEdges } from "./use-ngraph";
 
 interface SimpleGraphProps {
     nodes: SimpleNode[];
@@ -16,9 +16,9 @@ interface SimpleGraphProps {
 }
 
 export const SimpleGraph: FC<SimpleGraphProps> = ({ edges, nodes, onSelectNode, options: _options = {} }) => {
-    useChanged("edges", edges);
-    useChanged("onSelectNode", nodes);
-    useChanged("_options", _options);
+    // useChanged("edges", edges);
+    // useChanged("onSelectNode", nodes);
+    // useChanged("_options", _options);
 
     const [ref, { size: targetArea }] = useDimensions<HTMLDivElement>();
     const options = useDefaultOptions(_options);
@@ -42,8 +42,6 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({ edges, nodes, onSelectNode, 
                     name="root"
                     edges={posEdges}
                     nodes={posNodes}
-                    targetSize={targetArea}
-                    targetOffset={zeroPoint}
                     options={options}
                 />
             </SvgContainer>
