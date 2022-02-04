@@ -80,7 +80,7 @@ export const edges: SimpleEdge[] = [
     { from: "Virtual Compute & Containers", to: "Physical Compute", label: "VMs on HyperVisor" },
     { from: "Database", to: "Virtual Compute & Containers", label: "DBs on VMs" },
     { from: "Database", to: "Load Balancing", label: "DB Scale using LB" },
-];
+].map((e) => ({ ...e, name: `${e.from} -> ${e.to}` }));
 const connectedNodes = edges.reduce<string[]>((p, c) => [...p, c.from, c.to], []);
 
 export const nodesL3: HierarchicalNode[] = branchToNodeArray(nodeTree);

@@ -165,7 +165,7 @@ function getEdgesFromLayout(graph: NGraph, nodesDict: Record<string, PositionedN
     graph.forEachLink((link) => {
         layoutEdges.push({
             ...link.data,
-            name: `${link.data.from} -> ${link.data.to}`,
+            // name: `${link.data.from} -> ${link.data.to}`,
             from: link.fromId as string,
             to: link.toId as string,
             fromNode: nodesDict[link.fromId],
