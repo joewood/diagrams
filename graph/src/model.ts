@@ -51,6 +51,7 @@ export interface PositionedHierarchicalNode extends HierarchicalNode, Positioned
 export interface SimpleEdge {
     from: string;
     to: string;
+    name:string;
     label?: string;
     color?: string;
     thickness?: number;
