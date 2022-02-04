@@ -1,11 +1,11 @@
 import * as React from "react";
-import { FC, useCallback, useState } from "react";
+import { FC } from "react";
 import { Edges } from "./edges";
 import { MiniGraph, useChanged, useEdges } from "./mini-graph";
-import { GraphOptions, PositionedEdge, PositionedNode, SimpleEdge, SimpleNode, zeroPoint } from "./model";
+import { GraphOptions, SimpleEdge, SimpleNode, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useDefaultOptions } from "./use-ngraph-simple";
+import { useDefaultOptions } from "./use-ngraph";
 
 interface SimpleGraphProps {
     nodes: SimpleNode[];

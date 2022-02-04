@@ -8,8 +8,7 @@ import { MiniGraph, useChanged, useEdges } from "./mini-graph";
 import { GraphOptions, HierarchicalEdge, PositionedNode, SimpleNode, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useDefaultOptions } from "./use-ngraph-simple";
-import { useChildrenNodesByParent } from "./use-ngraph-structure";
+import { useChildrenNodesByParent, useDefaultOptions } from "./use-ngraph";
 
 interface GraphProps {
     nodes: HierarchicalNode[];

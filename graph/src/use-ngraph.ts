@@ -1,267 +1,247 @@
 import { groupBy, keyBy } from "lodash";
-import createLayout, { PhysicsSettings, Vector, Layout as NGraphLayout } from "ngraph.forcelayout";
-import { Graph, Link } from "ngraph.graph";
+import createLayout, { Vector } from "ngraph.forcelayout";
+import createGraph, { Link } from "ngraph.graph";
 import { useMemo } from "react";
-import { useSimpleGraph } from ".";
-import { getAnchor, getContainingRect, getMidPoint, HierarchicalEdge, HierarchicalNode, Size } from "./model";
 import {
-    getAllChildren,
-    trickleUpMass,
-    useChildrenNodesByParent,
-    useGraph,
-    useVisibleNodes,
-} from "./use-ngraph-structure";
+    getContainingRect,
+    GraphOptions, HierarchicalNode, NGraph,
+    NGraphLayout,
+    Point,
+    PositionedEdge,
+    PositionedNode,
+    RequiredGraphOptions,
+    SimpleEdge,
+    SimpleNode,
+    Size,
+    zeroPoint
+} from "./model";
 
-export interface UseNGraphOptions {
-    /** Default size of all nodes */
-    defaultSize?: Size;
-    /** Number of iterations */
-    iterations?: number;
-    textSize?: number;
-    physics?: Partial<PhysicsSettings>;
+
+/** Simply group nodes by their parent, null means no parent */
+export function useChildrenNodesByParent(nodes: HierarchicalNode[]) {
+    const childrenNodesByParent = useMemo<Record<string, HierarchicalNode[]>>(
+        () => groupBy(nodes, (node) => node.parent),
+        [nodes]
+    );
+    const nodesDict = keyBy(nodes, (n) => n.name);
+    return [childrenNodesByParent, nodesDict ] as [Record<string,HierarchicalNode[]>,Record<string,HierarchicalNode>];
 }
 
 
-// function useLayout(
-//     graph: Graph<HierarchicalNode, HierarchicalEdge>,
-//     allLinks: Link<HierarchicalEdge>[],
-//     leafNodes: GraphNodeVisible[],
-//     visibleNodesDict: Record<string, GraphNodeVisible>,
-//     iterations: number,
-//     options: Required<UseNGraphOptions>
-// ) {
-//     return useMemo(() => {
-//         // Do the LAYOUT
-//         // console.log("Physics", options.physics)
-//         const layout = createLayout(graph, {
-//             ...(options.physics || {}),
-//             gravity: -1200,
-//             dimensions: 2,
-//         });
-//         // for (const link of allLinks) {
-//         //     const spring = layout.getSpring(link);
-//         //     const edge = link.data;
-//         //     if (spring && edge && link.data.score) {
-//         //         spring.length = link.data.score;
-//         //     }
-//         // }
-//         layout.forEachBody((body) => (body.mass = 10 * options.defaultSize.width));
-//         leafNodes.forEach((n) => trickleUpMass(visibleNodesDict, layout, n));
-//         // const qt = new QuadTree(new Box(0, 0, 1000, 1000));
-//         // graph.forEachNode((n) => {
-//         //     const body = layout.getBody(n.id);
-//         //     if (body) qt.insert(getPointsFromBox(body.pos.x, body.pos.y, n.data.size.width, n.data.size.height));
-//         // });
-//         for (let i = 0; i < iterations; ++i) {
-//             const oldPos: Record<string, Vector> = {};
-//             graph.forEachNode((n) => {
-//                 const body1 = layout.getBody(n.id);
-//                 if (!body1) return;
-//                 oldPos[n.id] = body1?.pos;
-//             });
-//             graph.forEachNode((node1) => {
-//                 const body1 = layout.getBody(node1.id);
-//                 if (!body1 || !node1 || !node1.data || !node1.data.size) return;
-//                 const rect1 = {
-//                     x: body1?.pos.x,
-//                     y: body1?.pos.y,
-//                     width: node1?.data?.size.width,
-//                     height: node1?.data?.size.height,
-//                 };
-//                 graph.forEachNode((node2) => {
-//                     const body2 = layout.getBody(node2.id);
-//                     if (!body2 || !node2 || !node2.data || !node2.data.size) return;
-//                     const rect2 = {
-//                         x: body2?.pos.x,
-//                         y: body2?.pos.y,
-//                         width: node2?.data?.size.width,
-//                         height: node2?.data?.size.height,
-//                     };
-//                 });
-//             });
-//             layout.step();
-//         }
-//         return layout;
-//     }, [graph, iterations, leafNodes, options.defaultSize.width, options.physics, visibleNodesDict]);
-// }
 
-// function resizeNodeTree(
-//     leafNodes: GraphNodeVisible[],
-//     visibleNodesDict: Record<string, GraphNodeVisible>,
-//     layoutNodesDict: Record<string, LayoutNode>,
-//     childrenNodesByParent: Record<string, HierarchicalNode[]>,
-//     options: Required<UseNGraphOptions>
-// ) {
-//     // start off with the leaf Node names
-//     let treeLevel = leafNodes.map((node) => node.name);
-//     let levelNumber = 1;
-//     // while more leaf nodes to do
-//     while (treeLevel.length > 0) {
-//         for (const nodeName of treeLevel) {
-//             layoutNodesDict[nodeName].levelNumber = levelNumber;
-//         }
-//         // get all the parent node names of the current level
-//         treeLevel = treeLevel
-//             .filter((nodeName) => visibleNodesDict[nodeName].visible)
-//             .map((nodeName) => visibleNodesDict[nodeName].parent)
-//             .filter(Boolean) as string[];
-//         for (const nodeName of treeLevel) {
-//             const newPosSize = getContainingRect(
-//                 getAllChildren(childrenNodesByParent, visibleNodesDict, nodeName).map((v) => layoutNodesDict[v]),
-//                 options.textSize
-//             );
-//             if (!!layoutNodesDict[nodeName]) {
-//                 layoutNodesDict[nodeName].position = {
-//                     x: newPosSize.position.x + newPosSize.size.width / 2,
-//                     y: newPosSize.position.y + newPosSize.size.height / 2,
-//                 };
-//                 layoutNodesDict[nodeName].size = newPosSize.size;
-//             }
-//         }
-//         levelNumber++;
-//     }
-// }
+function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2: Point, bottomRight2: Point) {
+    if (topLeft1.x > bottomRight2.x || topLeft2.x > bottomRight1.x) {
+        return false;
+    }
+    if (topLeft1.y > bottomRight2.y || topLeft2.y > bottomRight1.y) {
+        return false;
+    }
+    return true;
+}
 
-// function getNodesFromLayout(
-//     visibleNodesDict: Record<string, GraphNodeVisible>,
-//     leafNodes: GraphNodeVisible[],
-//     layout: ReturnType<typeof createLayout>,
-//     options: Required<UseNGraphOptions>
-// ) {
-//     const layoutNodes: (LayoutNode & Visible)[] = [];
-//     const leafDict = keyBy(leafNodes, (n) => n.name);
-//     // DONE LAYOUT - NOW LOAD UP
-//     const layoutNodesDict: Record<string, LayoutNode> = {};
-//     layout.forEachBody((body, key) => {
-//         if (visibleNodesDict[key].visible) {
-//             const visibleNode = visibleNodesDict[key];
-//             const v: LayoutNodeVisible = {
-//                 ...visibleNode,
-//                 body,
-//                 levelNumber: 0,
-//                 size: visibleNodesDict[key].size ?? options.defaultSize,
-//                 position: layout.getNodePosition(key),
-//                 backgroundColor: visibleNodesDict[key].backgroundColor,
-//                 isLeaf: !!leafDict[key],
-//             };
-//             layoutNodes.push(v);
-//             layoutNodesDict[key] = v;
-//         }
-//     });
-//     for (const node of layoutNodes) {
-//         if (node.parent) node.parentNode = layoutNodesDict[node.parent];
-//     }
-//     return { layoutNodes, layoutNodesDict };
-// }
+function useLayout(graph: NGraph, options: RequiredGraphOptions) {
+    return useMemo(() => {
+        // Do the LAYOUT
+        const layout = createLayout(graph, options);
+        layout.forEachBody(
+            (body, id) => (body.mass = 50 * (graph.getNode(id)?.data?.size ?? options.defaultSize).width)
+        );
+        // const qt = new QuadTree(new Box(0, 0, 1000, 1000));
+        // graph.forEachNode((n) => {
+        //     const body = layout.getBody(n.id);
+        //     if (body) qt.insert(getPointsFromBox(body.pos.x, body.pos.y, n.data.size.width, n.data.size.height));
+        // });
+        for (let i = 0; i < options.iterations; ++i) {
+            const oldPos: Record<string, Vector> = {};
+            graph.forEachNode((n) => {
+                const body = layout.getBody(n.id);
+                if (!body) return;
+                oldPos[n.id] = body?.pos;
+            });
+            layout.step();
+            graph.forEachNode((node1) => {
+                const body1 = layout.getBody(node1.id);
+                if (!body1 || !node1 || !node1.data || !node1.data.size) return;
+                const staticRect = {
+                    x: body1?.pos.x,
+                    y: body1?.pos.y,
+                    width: node1?.data?.size.width,
+                    height: node1?.data?.size.height,
+                };
+                graph.forEachNode((testNode) => {
+                    const body2 = layout.getBody(testNode.id);
+                    if (!body2 || !testNode || !testNode.data || !testNode.data.size) return;
+                    const testRect = {
+                        x: body2?.pos.x,
+                        y: body2?.pos.y,
+                        width: testNode?.data?.size.width,
+                        height: testNode?.data?.size.height,
+                    };
+                    if (
+                        rectanglesOverlap(
+                            { x: staticRect.x, y: staticRect.y },
+                            { x: staticRect.x + staticRect.width, y: staticRect.y + staticRect.height },
+                            { x: testRect.x, y: testRect.y },
+                            { x: testRect.x + testRect.width, y: testRect.y + testRect.height }
+                        )
+                    ) {
+                        const newPos = { x: testRect.x, y: testRect.y };
+                        if (
+                            testRect.x + testRect.width > staticRect.x &&
+                            testRect.x + testRect.width < staticRect.x + staticRect.width
+                        ) {
+                            newPos.x = oldPos[testNode.id].x;
+                            body2.velocity = { x: 0, y: body2.velocity.y };
+                        }
+                        if (
+                            testRect.y + testRect.height > staticRect.y &&
+                            testRect.y + testRect.height < staticRect.y + staticRect.height
+                        ) {
+                            newPos.y = oldPos[testNode.id].y;
+                            body2.velocity = { x: body2.velocity.x, y: 0 };
+                        }
+                        testRect.x = newPos.x;
+                        testRect.y = newPos.y;
+                    }
+                });
+            });
+        }
+        return layout;
+    }, [graph, options]);
+}
+
+function getNodesFromLayout(
+    nodesDict: Record<string, SimpleNode>,
+    layout: NGraphLayout,
+    options: Pick<RequiredGraphOptions, "defaultSize">
+) {
+    const layoutNodes: PositionedNode[] = [];
+    layout.forEachBody((body, key) => {
+        const simpleNode = nodesDict[key];
+        if (!simpleNode) {
+            console.warn(`Found ${key} but not in dict ${nodesDict}`);
+            return;
+        }
+        layoutNodes.push({
+            ...simpleNode,
+            body,
+            size: simpleNode.size ?? options.defaultSize,
+            position: layout.getNodePosition(key),
+            backgroundColor: simpleNode.backgroundColor,
+            containerPosition: zeroPoint,
+        });
+    });
+    return layoutNodes;
+}
 
 /** Iterate over edges and create line structures */
-// function getEdgesFromLayout(
-//     graph: Graph<HierarchicalNode, HierarchicalEdge>,
-//     layout: NGraphLayout<Graph<HierarchicalNode, HierarchicalEdge>>,
-//     options: Required<UseNGraphOptions>
-// ) {
-//     const layoutEdges: LayoutEdge[] = [];
-//     graph.forEachLink((link) => {
-//         // if (link.data.hierarchical) return;
-//         const fromPos = layout.getNodePosition(link.fromId);
-//         const toPos = layout.getNodePosition(link.toId);
-//         const fromNode = graph.getNode(link.fromId)?.data! as LayoutNode;
-//         if (!fromNode) {
-//             console.error("Cannot find FROM node for ", link.fromId);
-//             return;
-//         }
-//         const toNode = graph.getNode(link.toId)?.data! as LayoutNode;
-//         if (!toNode) {
-//             console.error("Cannot find TO node for ", link.toId);
-//             return;
-//         }
-//         const midPoint = { x: getMidPoint(fromPos.x, toPos.x, 0.5), y: getMidPoint(fromPos.y, toPos.y, 0.5) };
-//         const fromPoint = getAnchor(fromPos, fromNode.size ?? options.defaultSize, toPos);
-//         const toPoint = getAnchor(toPos, toNode.size ?? options.defaultSize, fromPos);
-//         layoutEdges.push({
-//             ...link.data,
-//             name: `${link.data?.from} -> ${link.data?.to ?? "NULL"}`,
-//             from: link.fromId as string,
-//             to: link.toId as string,
-//             fromNode,
-//             toNode,
-//             points: [fromPoint, midPoint, toPoint],
-//             hide: link.data.hierarchical,
-//             link,
-//         });
-//     });
-//     return layoutEdges;
-// }
+function getEdgesFromLayout(graph: NGraph, nodesDict: Record<string, PositionedNode>) {
+    const layoutEdges: PositionedEdge[] = [];
+    graph.forEachLink((link) => {
+        layoutEdges.push({
+            ...link.data,
+            name: `${link.data.from} -> ${link.data.to}`,
+            from: link.fromId as string,
+            to: link.toId as string,
+            fromNode: nodesDict[link.fromId],
+            toNode: nodesDict[link.toId],
+            link,
+        });
+    });
+    return layoutEdges;
+}
 
-/** The Layout in NGraph needs to be iterated. We also need to resize the hierarchical parent nodes so that they
- * contain all their children. */
-// function useGraphStructureFromLayout<T extends Graph>(
-//     graph: T,
-//     leafNodes: GraphNodeVisible[],
-//     layout: ReturnType<typeof createLayout>,
-//     visibleNodesDict: Record<string, GraphNodeVisible>,
-//     childrenNodesByParent: Record<string, HierarchicalNode[]>,
-//     options: Required<UseNGraphOptions>
-// ) {
-//     return useMemo<[LayoutNodeVisible[], LayoutEdge[]]>(() => {
-//         const { layoutNodes, layoutNodesDict } = getNodesFromLayout(visibleNodesDict, leafNodes, layout, options);
-//         resizeNodeTree(leafNodes, visibleNodesDict, layoutNodesDict, childrenNodesByParent, options);
-//         const layoutEdges = getEdgesFromLayout(graph, layout, options);
-//         return [layoutNodes, layoutEdges];
-//     }, [childrenNodesByParent, graph, layout, leafNodes, options, visibleNodesDict]);
-// }
+export function useContainingRect(targetArea: Size, positionedNodes: PositionedNode[], textSize: number) {
+    // get the containing rectangle
+    return useMemo(
+        () => getContainingRect(positionedNodes, targetArea, textSize * 2),
+        [targetArea, positionedNodes, textSize]
+    );
+}
 
-// export function useNgraph(
-//     nodes: HierarchicalNode[],
-//     edges: HierarchicalEdge[],
-//     expanded: string[] = [],
-//     options:GraphOptions
-// ) {
-    
-//     const visibleNodes = nodes.filter( n=> n.parent===null || expanded.includes(n.parent))
-//     const leafNodes  =visibleNodes.filter( n=> n.parent===null)
-//     const { childrenNodesByParent } = useChildrenNodesByParent(visibleNodes);
+function useCreateGraph(nodes: SimpleNode[], edges: SimpleEdge[]) {
+    const { graph, allLinks } = useMemo(() => {
+        console.log("Creating Graph");
+        const graph = createGraph({ multigraph: true });
+        nodes.forEach((node) => {
+            graph.addNode(node.name, node);
+        });
+        const allLinks: Link<SimpleEdge>[] = [];
+        // Add links between nodes, using the aliases from above, which covers which nodes are expanded
+        for (const edge of edges) {
+            if (edge.from !== edge.to) {
+                allLinks.push(graph.addLink(edge.from, edge.to, edge));
+            }
+        }
+        return { graph, allLinks };
+    }, [edges, nodes]);
+    return { graph, allLinks };
+}
 
-//     // const { visibleNodes, visibleNodesDict, getVisibleNode, leafNodes } = useVisibleNodes(
-//     //     nodes,
-//     //     childrenNodesByParent,
-//     //     expanded
-//     // );
-//     const [ positionedLeafNodes, positionedLeafEdges ] = useSimpleGraph(
-//         leafNodes,
-//         edges,
-//         options
-//     );
-//         const positionedNodeDict = keyBy(positionedLeafNodes,n=>n.name)
-//         const positionedParents = Object.keys(childrenNodesByParent).map( k => {
+export function useDefaultOptions({
+    defaultSize,
+    iterations = 100,
+    debugMassNode = false,
+    textSize,
+    gravity = -12,
+    springCoefficient = 0.8,
+    springLength = 10,
+    theta = 0.8,
+    dragCoefficient = 0.9,
+    dimensions = 2,
+    timeStep = 0.5,
+    debug = false,
+    adaptiveTimeStepWeight = 0,
+}: GraphOptions) {
+    return useMemo<RequiredGraphOptions>(
+        () => ({
+            defaultSize: defaultSize ?? { width: 100, height: 80 },
+            iterations,
+            debugMassNode,
+            gravity,
+            springCoefficient,
+            springLength,
+            theta,
+            dragCoefficient,
+            dimensions,
+            timeStep,
+            adaptiveTimeStepWeight,
+            debug,
+            textSize: textSize ?? (defaultSize?.width ?? 100) / 12,
+        }),
+        [
+            adaptiveTimeStepWeight,
+            debug,
+            debugMassNode,
+            defaultSize,
+            dimensions,
+            dragCoefficient,
+            gravity,
+            iterations,
+            springCoefficient,
+            springLength,
+            textSize,
+            theta,
+            timeStep,
+        ]
+    );
+}
 
-
-//         })
-
-//         }
-
-//     const [layoutNodes, layoutEdges] = useGraphStructureFromLayout(
-//         graph,
-//         leafNodes,
-//         layout,
-//         visibleNodesDict,
-//         childrenNodesByParent,
-//         options
-//     );
-//     const positioned = useMemo(() => {
-//         // TODO - raise issue the type is wrong in ngraph.layout
-//         const { position, size } = getContainingRect(layoutNodes, options.textSize);
-//         const width = Math.max(2 * options.defaultSize.width, size.width);
-//         const height = Math.max(2 * options.defaultSize.height, size.height);
-//         return {
-//             nodes: layoutNodes,
-//             edges: layoutEdges,
-//             minPoint: { x: position.x - options.textSize, y: position.y - options.textSize },
-//             maxPoint: { x: position.x + width + options.textSize, y: position.y + height + options.textSize },
-//             tree: groupBy(layoutNodes, (n) => n.parent || ""),
-//             expanded,
-//             textSize: options.textSize,
-//         };
-//     }, [layoutNodes, options.textSize, options.defaultSize.width, options.defaultSize.height, layoutEdges, expanded]);
-//     return positioned;
-// }
+export function useSimpleGraph(
+    nodes: SimpleNode[],
+    edges: SimpleEdge[],
+    options: Pick<Required<GraphOptions>, "defaultSize" | "iterations">
+): [PositionedNode[], PositionedEdge[]] {
+    const { graph } = useCreateGraph(nodes, edges);
+    const _options = useDefaultOptions(options);
+    const layout = useLayout(graph, _options);
+    const nodesDict = useMemo(() => keyBy(nodes, (n) => n.name), [nodes]);
+    return useMemo<[PositionedNode[], PositionedEdge[]]>(() => {
+        const positionedNodes = getNodesFromLayout(nodesDict, layout, options);
+        const positionedEdges = getEdgesFromLayout(
+            graph,
+            keyBy(positionedNodes, (node) => node.name)
+        );
+        return [positionedNodes, positionedEdges];
+    }, [graph, layout, options, nodesDict]);
+}

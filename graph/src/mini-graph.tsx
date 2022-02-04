@@ -12,10 +12,10 @@ import {
     SimpleNode,
     Size,
     transition,
-    zeroPoint,
+    zeroPoint
 } from "./model";
 import { TextBox } from "./svg-react";
-import { useContainingRect, useSimpleGraph } from "./use-ngraph-simple";
+import { useContainingRect, useSimpleGraph } from "./use-ngraph";
 
 interface MiniGraphProps {
     nodes: SimpleNode[];
