@@ -1,0 +1,35 @@
+{
+    "name": "@diagrams/three-utils",
+    "version": "0.1.0",
+    "private": true,
+    "main": "./lib/index.js",
+    "types": "./lib/index.d.ts",
+    "homepage": "https://joewood.github.io/dag-3d",
+    "dependencies": {
+        "@react-three/drei": "latest",
+        "@types/lodash": "latest",
+        "@types/node": "latest",
+        "@types/react": "^17.0",
+        "@types/react-dom": "^17.0",
+        "@types/three": "latest",
+        "lodash-es": "latest"
+    },
+    "peerDependencies": {
+        "three": "*",
+        "@react-three/fiber": "*",
+        "react": "17.0.2",
+        "react-dom": "^17.0.2"
+    },
+    "scripts": {
+        "start": "tsc -p . --watch",
+        "clean": "rm -rf lib",
+        "build": "tsc -p . "
+    },
+    "eslintConfig": {
+        "extends": "react-app"
+    },
+    "prettier": {
+        "tabWidth": 4,
+        "printWidth": 120
+    }
+}

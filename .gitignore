@@ -6,6 +6,7 @@ node_modules
 .pnp.js
 /graph/lib
 /graph3d/lib
+/three-utils/lib
 /example/build
 # testing
 /coverage
