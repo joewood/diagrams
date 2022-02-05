@@ -1,6 +1,6 @@
 {
-    "short_name": "Sim-V",
-    "name": "Simulated Visualizations",
+    "short_name": "Diagrams",
+    "name": "Generated Interactive Diagrams",
     "icons": [
         {
             "src": "favicon.ico",
