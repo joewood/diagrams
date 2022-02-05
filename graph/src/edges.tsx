@@ -71,8 +71,8 @@ export const Edges = memo<Props>(({ edges, nodes, options }) => {
                 (edge) =>
                     edge && (
                         <motion.text
-                            key={edge.name + "X"}
-                            layoutId={edge.name + "X"}
+                            key={edge.name + "-text"}
+                            layoutId={edge.name + "-text"}
                             textAnchor="middle"
                             fontSize={options.textSize}
                             fill={edge.labelColor ?? "#333"}

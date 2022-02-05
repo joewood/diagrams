@@ -23,7 +23,9 @@ import * as React from "react";
 import { FC, useMemo, useState } from "react";
 import ReactDOM from "react-dom";
 import { BrowserRouter, Link as RouterLink, Route, Routes } from "react-router-dom";
-import { DemoGraphLevel2, DemoGraphLevel3, DemoGraphSimple } from "./demo-graph2D";
+import { DemoGraphSimple } from "./demo-simple";
+import { DemoGraphThreeDeep } from "./demo-three-deep";
+import { DemoGraphTwoDeep } from "./demo-two-deep";
 
 const Hello: FC = () => (
     <Center height="100%">
@@ -126,12 +128,12 @@ const AppA: FC = () => {
             {
                 name: "2-Level Hierarchical Graph",
                 path: "/dag2dl2",
-                component: <DemoGraphLevel2 options={options} />,
+                component: <DemoGraphTwoDeep options={options} />,
             },
             {
                 name: "3-Level Hierarchical Graph",
                 path: "/dag2dl3",
-                component: <DemoGraphLevel3 options={options} />,
+                component: <DemoGraphThreeDeep options={options} />,
             },
         ],
         [options]

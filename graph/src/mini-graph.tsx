@@ -12,7 +12,7 @@ import {
     SimpleNode,
     Size,
     transition,
-    zeroPoint
+    zeroPoint,
 } from "./model";
 import { PaintNode } from "./node";
 import { AbsolutePositionedNode, useContainingRect, useSimpleGraph } from "./use-ngraph";
@@ -66,11 +66,18 @@ export const MiniGraph = memo<MiniGraphProps>(
                 positionedNodes.map((node) => ({
                     ...node,
                     position: adjustPosition(node.position, virtualTopLeft, virtualSize, targetArea),
-                    absolutePosition: adjustPosition(node.position, virtualTopLeft, virtualSize, targetArea,targetOffset),
+                    absolutePosition: adjustPosition(
+                        node.position,
+                        virtualTopLeft,
+                        virtualSize,
+                        targetArea,
+                        targetOffset
+                    ),
                     containerPosition: virtualTopLeft,
                 })),
             [positionedNodes, virtualTopLeft, virtualSize, targetArea, targetOffset]
         );
+        // notify parent graph that a node has been changed
         useEffect(
             () =>
                 onNodesPositioned?.(
@@ -79,11 +86,6 @@ export const MiniGraph = memo<MiniGraphProps>(
                 ),
             [layoutNodes, onNodesPositioned, positionedEdges]
         );
-        const customRenderNodes = (
-            (renderNode && layoutNodes.map((node) => renderNode(node, onSelectNode, options))) ||
-            []
-        ).filter(Boolean);
-
         return (
             <motion.g
                 layoutId={name}
@@ -94,7 +96,9 @@ export const MiniGraph = memo<MiniGraphProps>(
                 {layoutNodes.map((node) => (
                     <PaintNode key={node.name} node={node} onSelectNode={onSelectNode} options={options} />
                 ))}
-                {customRenderNodes}
+                {((renderNode && layoutNodes.map((node) => renderNode(node, onSelectNode, options))) || []).filter(
+                    Boolean
+                )}
             </motion.g>
         );
     }
