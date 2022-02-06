@@ -1,6 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { GraphOptions, SimpleGraph } from "@diagrams/graph";
-import { useDefaultOptions } from "@diagrams/graph/lib/use-ngraph-simple";
+import { GraphOptions, SimpleGraph, useDefaultOptions } from "@diagrams/graph";
 import * as React from "react";
 import { FC, useCallback, useMemo, useState } from "react";
 import { edges, nodesLeaf } from "./data";
@@ -8,9 +7,9 @@ import { edges, nodesLeaf } from "./data";
 export const DemoGraphSimple: FC<{
     options: GraphOptions;
 }> = ({ options: _options }) => {
-    const [selected, setSelected] = useState<string>();
+    const [selected, setSelected] = useState<string | null>(null);
     const options = useDefaultOptions(_options);
-    const expand = useCallback(({ name }: { name: string }) => {
+    const onSelect = useCallback(({ name }: { name: string }) => {
         setSelected(name);
     }, []);
     const largeNodes = useMemo(
@@ -25,14 +24,21 @@ export const DemoGraphSimple: FC<{
                           }
                         : node.size,
                 border: node.name === selected ? "#000" : "#333",
-                shadow: true
+                shadow: true,
             })),
         [options.defaultSize, selected]
     );
+    console.log("Selected " + selected)
     return (
         <Box width="100%" height="100%">
-            <SimpleGraph nodes={largeNodes} edges={edges} options={options} onSelectNode={expand} />;
+            <SimpleGraph
+                nodes={largeNodes}
+                edges={edges}
+                options={options}
+                onSelectNode={onSelect}
+                selectedNode={selected}
+            />
+            ;
         </Box>
     );
 };
-

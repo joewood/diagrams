@@ -40,6 +40,7 @@ export interface PositionedNode extends SimpleNode {
     initialPosition?: Point;
     initialSize?: Size;
     containerPosition: Point;
+    expanded?:boolean;
 }
 
 export interface PositionedHierarchicalNode extends HierarchicalNode, PositionedNode {
@@ -89,40 +90,6 @@ export interface GraphOptions extends Partial<PhysicsSettings> {
 
 export type RequiredGraphOptions = Required<GraphOptions>;
 
-// export interface LayoutNode extends GraphNode {
-//     name: string;
-//     size: Size;
-//     position: Point;
-//     body?: Body;
-//     levelNumber: number;
-//     isLeaf: boolean;
-//     parentNode?: LayoutNode | null;
-// }
-
-// export interface Visible {
-//     visible: boolean;
-// }
-
-// export type GraphNodeVisible = GraphNode & Visible;
-// export type LayoutNodeVisible = LayoutNode & Visible;
-
-// export interface LayoutEdge extends GraphEdge {
-//     name: string;
-//     points: Point[];
-//     link: Link<GraphEdge>;
-//     fromNode?: LayoutNode;
-//     toNode?: LayoutNode;
-//     hide?: boolean;
-// }
-
-// export interface Layout {
-//     nodes: (LayoutNode & Visible)[];
-//     edges: LayoutEdge[];
-//     tree: { [index: string]: LayoutNodeVisible[] };
-//     minPoint: Point;
-//     maxPoint: Point;
-//     textSize: number;
-// }
 
 const abs = Math.abs;
 

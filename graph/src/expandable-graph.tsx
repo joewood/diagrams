@@ -4,17 +4,17 @@ import * as React from "react";
 import { FC, useCallback, useMemo } from "react";
 import { HierarchicalNode } from ".";
 import { Edges } from "./edges";
-import { MiniGraph,  } from "./mini-graph";
-import { GraphOptions, HierarchicalEdge, PositionedNode, SimpleNode, zeroPoint } from "./model";
+import { MiniGraph, MiniGraphProps } from "./mini-graph";
+import { GraphOptions, HierarchicalEdge, SimpleNode, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
 import { useChildrenNodesByParent, useDefaultOptions, useEdges } from "./use-ngraph";
 
-interface GraphProps {
+type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode";
+
+export interface ExpandableGraphProps extends Pick<Required<MiniGraphProps>, ReuseMiniGraphProps> {
     nodes: HierarchicalNode[];
     edges: HierarchicalEdge[];
-    onSelectNode?: (args: { name: string }) => void;
-    selectedNode?: string | null;
     expanded: string[];
     options?: GraphOptions;
 }
@@ -31,7 +31,15 @@ function getVisibleNode(
     return node;
 }
 
-export const ExpandableGraph: FC<GraphProps> = ({ edges, nodes, onSelectNode, expanded, options: _options = {} }) => {
+export const ExpandableGraph: FC<ExpandableGraphProps> = ({
+    edges,
+    nodes,
+    onSelectNode,
+    selectedNode,
+    onExpandToggleNode,
+    expanded,
+    options: _options = {},
+}) => {
     // useChanged("edges", edges);
     // useChanged("nodes", nodes);
     // useChanged("onSelectNode", onSelectNode);
@@ -44,7 +52,7 @@ export const ExpandableGraph: FC<GraphProps> = ({ edges, nodes, onSelectNode, ex
     const leafNodes = useMemo(() => nodes.filter((n) => n.parent === null), [nodes]);
     const leafNodesDict = useMemo(() => keyBy(leafNodes, (l) => l.name), [leafNodes]);
     const routedEdges = useMemo(() => {
-        const nodesDict =  keyBy(nodes, (n) => n.name);
+        const nodesDict = keyBy(nodes, (n) => n.name);
         const reroutedNodesDict = mapValues(nodesDict, (n) => getVisibleNode(n, leafNodesDict, nodesDict, expanded));
         const routedEdges = edges.map((edge) => ({
             ...edge,
@@ -69,14 +77,17 @@ export const ExpandableGraph: FC<GraphProps> = ({ edges, nodes, onSelectNode, ex
                           height: (node.size ?? options.defaultSize).height * 4,
                       }
                     : node.size,
-                border: expanded.includes(node.name) ? "red" : "black",
+                expanded: expanded.includes(node.name),
+                border: expanded.includes(node.name)
+                    ? mix(node.backgroundColor ?? "gray", "black", 0.6).css()
+                    : mix(node.backgroundColor ?? "gray", "black", 0.3).css(),
                 backgroundColor: mix(node.backgroundColor ?? "gray", "rgba(255,255,255,0)", 0.3).css(),
             })),
         [expanded, leafNodes, options.defaultSize]
     );
     const [posNodesDict, posEdges, onNodesMoved] = useEdges();
-    const renderNode = useCallback(
-        (node: PositionedNode) =>
+    const renderNode = useCallback<Required<MiniGraphProps>["renderNode"]>(
+        (node) =>
             (nodesByParent[node.name] && (
                 <MiniGraph
                     key={node.name + "-graph"}
@@ -86,8 +97,11 @@ export const ExpandableGraph: FC<GraphProps> = ({ edges, nodes, onSelectNode, ex
                         initialPosition: node.position,
                     }))}
                     edges={[]}
+                    renderNode={renderNode}
                     name={node.name + "-graph"}
                     onSelectNode={onSelectNode}
+                    selectedNode={selectedNode}
+                    onExpandToggleNode={onExpandToggleNode}
                     targetArea={node.size}
                     onNodesPositioned={onNodesMoved}
                     targetOffset={{
@@ -98,7 +112,7 @@ export const ExpandableGraph: FC<GraphProps> = ({ edges, nodes, onSelectNode, ex
                 />
             )) ||
             null,
-        [nodesByParent, onNodesMoved, onSelectNode, options]
+        [nodesByParent, onExpandToggleNode, onNodesMoved, onSelectNode, options, selectedNode]
     );
 
     return (
@@ -111,18 +125,13 @@ export const ExpandableGraph: FC<GraphProps> = ({ edges, nodes, onSelectNode, ex
                     name="root"
                     options={options}
                     onSelectNode={onSelectNode}
+                    onExpandToggleNode={onExpandToggleNode}
                     targetArea={targetSize}
                     targetOffset={zeroPoint}
                     onNodesPositioned={onNodesMoved}
                     renderNode={renderNode}
                 />
-                <Edges
-                    key="edges"
-                    name="root"
-                    edges={posEdges}
-                    nodes={posNodesDict}
-                    options={options}
-                />
+                <Edges key="edges" name="root" edges={posEdges} nodes={posNodesDict} options={options} />
             </SvgContainer>
         </div>
     );

@@ -1,21 +1,27 @@
 import * as React from "react";
 import { FC } from "react";
 import { Edges } from "./edges";
-import { MiniGraph } from "./mini-graph";
+import { MiniGraph, MiniGraphProps } from "./mini-graph";
 import { GraphOptions, SimpleEdge, SimpleNode, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
 import { useDefaultOptions, useEdges } from "./use-ngraph";
 
-interface SimpleGraphProps {
+type ReuseMiniGraphProps = "onSelectNode" | "selectedNode";
+
+interface SimpleGraphProps extends Pick<Required<MiniGraphProps>, ReuseMiniGraphProps> {
     nodes: SimpleNode[];
     edges: SimpleEdge[];
-    onSelectNode?: (args: { name: string }) => void;
-    selectedNode?: string | null;
     options?: GraphOptions;
 }
 
-export const SimpleGraph: FC<SimpleGraphProps> = ({ edges, nodes, onSelectNode, options: _options = {} }) => {
+export const SimpleGraph: FC<SimpleGraphProps> = ({
+    edges,
+    nodes,
+    onSelectNode,
+    selectedNode,
+    options: _options = {},
+}) => {
     // useChanged("edges", edges);
     // useChanged("onSelectNode", nodes);
     // useChanged("_options", _options);
@@ -32,18 +38,13 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({ edges, nodes, onSelectNode, 
                     nodes={nodes}
                     edges={edges}
                     onSelectNode={onSelectNode}
+                    selectedNode={selectedNode}
                     targetArea={targetArea}
                     targetOffset={zeroPoint}
                     onNodesPositioned={onNodesMoved}
                     options={options}
                 />
-                <Edges
-                    key="edges"
-                    name="root"
-                    edges={posEdges}
-                    nodes={posNodes}
-                    options={options}
-                />
+                <Edges key="edges" name="root" edges={posEdges} nodes={posNodes} options={options} />
             </SvgContainer>
         </div>
     );

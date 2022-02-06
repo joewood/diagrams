@@ -12,6 +12,7 @@ interface RectProps {
     position: Point;
     fillColor?: string;
     borderColor?: string;
+    borderThickness?:number;
     textColor?: string;
     textSize?: number | string;
     text?: string;
@@ -29,11 +30,13 @@ export const TextBox: FC<RectProps> = ({
     fillColor = "transparent",
     borderColor = "white",
     textColor = "black",
+    borderThickness = 2,
     verticalAnchor = "middle",
     textSize,
     text,
     filter,
     onSelectNode,
+    children
 }) => {
     const onClick = useCallback(() => {
         if (onSelectNode) onSelectNode({ name });
@@ -90,7 +93,7 @@ export const TextBox: FC<RectProps> = ({
                     fill={fillColor}
                     filter={filter}
                     stroke={borderColor}
-                    strokeWidth={1}
+                    strokeWidth={borderThickness}
                     onClick={onClick}
                 />
                 <Text
@@ -107,6 +110,7 @@ export const TextBox: FC<RectProps> = ({
                 >
                     {text ?? name}
                 </Text>
+                {children}
             </motion.g>
         </>
     );

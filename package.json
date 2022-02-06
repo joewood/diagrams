@@ -1,11 +1,14 @@
 {
    "name": "@diagrams/main",
-   "version": "0.1.5",
-   "private": true,
-   "homepage": "https://joewood.github.io/dag-3d",
+   "version": "0.1.6",
+   "private": false,
+   "homepage": "https://joewood.github.io/diagrams",
+   "repository": {
+      "git": "https://github.com/joewood/diagrams"
+   },
    "workspaces": [
-      "./example",
-      "./graph"
+      "example",
+      "graph"
    ],
    "devDependencies": {
       "typescript": "latest"
