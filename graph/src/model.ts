@@ -40,7 +40,7 @@ export interface PositionedNode extends SimpleNode {
     initialPosition?: Point;
     initialSize?: Size;
     containerPosition: Point;
-    expanded?:boolean;
+    expanded?: boolean;
 }
 
 export interface PositionedHierarchicalNode extends HierarchicalNode, PositionedNode {
@@ -52,7 +52,7 @@ export interface PositionedHierarchicalNode extends HierarchicalNode, Positioned
 export interface SimpleEdge {
     from: string;
     to: string;
-    name:string;
+    name: string;
     label?: string;
     color?: string;
     thickness?: number;
@@ -89,7 +89,6 @@ export interface GraphOptions extends Partial<PhysicsSettings> {
 }
 
 export type RequiredGraphOptions = Required<GraphOptions>;
-
 
 const abs = Math.abs;
 
@@ -201,3 +200,62 @@ export function adjustPosition(
         y: ((virtualPoint.y - virtualTopLeft.y) / virtualSize.height) * targetSize.height + (targetPosition?.y ?? 0),
     };
 }
+
+export type NumericOpts = "gravity" | "springCoefficient" | "springLength" | "dragCoefficient" | "theta" | "textSize";
+export type PhysicsSettingsBag = {
+    [Property in keyof Pick<RequiredGraphOptions, NumericOpts>]: {
+        name: string;
+        description: string;
+        default: RequiredGraphOptions[Property];
+        minVal: RequiredGraphOptions[Property];
+        maxVal: RequiredGraphOptions[Property];
+    };
+};
+
+export const physicsMeta: PhysicsSettingsBag = {
+    gravity: {
+        name: "Gravity - Coulomb's law coefficient",
+        description:
+            "It's used to repel nodes thus should be negative if you make it positive nodes start attract each other",
+        minVal: -1500,
+        maxVal: 0,
+        default: -12,
+    },
+    springCoefficient: {
+        name: "Hook's law coefficient",
+        description: "1 - solid spring.",
+        minVal: 0,
+        maxVal: 1,
+        default: 0.8,
+    },
+    springLength: {
+        name: "Ideal length for links",
+        description: "Ideal length for links (springs in physical model).",
+        minVal: 2,
+        maxVal: 500,
+        default: 10,
+    },
+    theta: {
+        name: "Theta coefficient from Barnes Hut simulation",
+        description:
+            "The closer it's to 1 the more nodes algorithm will have to go through. Setting it to one makes Barnes Hut simulation no different from brute-force forces calculation (each node is considered)",
+        minVal: 0,
+        maxVal: 1,
+        default: 0.8,
+    },
+    dragCoefficient: {
+        name: "Drag force coefficient",
+        description:
+            "Used to slow down system, thus should be less than 1. The closer it is to 0 the less tight system will be.",
+        minVal: 0,
+        maxVal: 1,
+        default: 0.9,
+    },
+    textSize: {
+        name: "Size of text",
+        description: "Default font size",
+        minVal: 1,
+        maxVal: 20,
+        default: 10,
+    },
+};

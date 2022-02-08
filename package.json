@@ -7,8 +7,9 @@
       "git": "https://github.com/joewood/diagrams"
    },
    "workspaces": [
-      "example",
-      "graph"
+      "graph",
+      "sidebar",
+      "example"
    ],
    "devDependencies": {
       "typescript": "latest"
@@ -19,8 +20,9 @@
       "react-dom": "^17.0.2"
    },
    "scripts": {
-      "start": "concurrently --kill-others -n graph,example npm:start-graph npm:start-example",
+      "start": "concurrently --kill-others -n graph,sidebar,example npm:start-graph npm:start-sidebar npm:start-example",
       "start-graph": "FORCE_COLORS=1 npm start -w graph | cat",
+      "start-sidebar": "FORCE_COLORS=1 npm start -w sidebar | cat",
       "start-example": "FORCE_COLORS=1 npm start -w example | cat"
    },
    "eslintConfig": {

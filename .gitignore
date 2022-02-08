@@ -8,6 +8,7 @@ node_modules
 /graph3d/lib
 /three-utils/lib
 /example/build
+/sidebar/lib
 # testing
 /coverage
 
