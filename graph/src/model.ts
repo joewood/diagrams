@@ -1,4 +1,4 @@
-import { intersection } from "lodash";
+import { intersection, minBy } from "lodash";
 import { Body, Layout as NLayout, PhysicsSettings } from "ngraph.forcelayout";
 import { Graph, Link } from "ngraph.graph";
 
@@ -92,20 +92,42 @@ export type RequiredGraphOptions = Required<GraphOptions>;
 
 const abs = Math.abs;
 
+const twoPoints = (point: Point, size: Size, directionX: number, directionY: number) => [
+    { x: point.x, y: point.y + (directionY * size.height) / 2 },
+    { x: point.x + (directionX * size.width) / 2, y: point.y },
+];
+
 /** For a given Node's position and size, provide a good anchor point when joining from a point */
-export function getAnchor(nodePosition: Point, nodeSize: Size, fromPoint: Point): Point {
-    let dy = fromPoint.y - nodePosition.y;
-    const directionY = abs(dy) / dy;
-    dy = dy - (nodeSize.height / 2) * directionY;
-    let dx = fromPoint.x - nodePosition.x;
+export function getAnchors(
+    toPoint: Point,
+    toSize: Size,
+    fromPoint: Point,
+    fromSize: Size
+): [Point, Point, Point, Point] {
+    let dx = toPoint.x - fromPoint.x;
+    let dy = toPoint.y - fromPoint.y;
     const directionX = dx === 0 ? 1 : abs(dx) / dx;
-    dx = dx - (nodeSize.width / 2) * directionX;
-    // if the point is further down/up than left/right then use bottom/top anchor
-    if (abs(dy) > abs(dx)) {
-        return { x: nodePosition.x, y: nodePosition.y + (nodeSize.height / 2) * directionY };
-    } else {
-        return { x: nodePosition.x + (nodeSize.width / 2) * directionX, y: nodePosition.y };
+    const directionY = dy === 0 ? 1 : abs(dy) / dy;
+    const distances: { from: Point; to: Point; distance: number }[] = [];
+    for (const from of twoPoints(fromPoint, fromSize, directionX, directionY)) {
+        for (const to of twoPoints(toPoint, toSize, directionX * -1, directionY * -1)) {
+            distances.push({ from, to, distance: Math.sqrt((to.x - from.x) ** 2 + (to.y - from.y) ** 2) });
+        }
     }
+    const min = minBy(distances, (p) => p.distance);
+    if (!min) return [fromPoint,fromPoint,toPoint,toPoint]
+    // if the point is further down/up than left/right then use bottom/top anchor
+    let anchorFrom = min.from;
+    let normalFrom: Point = {
+        x: fromPoint.x + (anchorFrom.x - fromPoint.x) * 2,
+        y: fromPoint.y + (anchorFrom.y - fromPoint.y) * 2,
+    };
+    let anchorTo = min.to;
+    let normalTo: Point = {
+        x: toPoint.x + (anchorTo.x - toPoint.x) * 2,
+        y: toPoint.y + (anchorTo.y - toPoint.y) * 2,
+    };
+    return [anchorFrom, normalFrom, normalTo, anchorTo];
 }
 
 /** Calculates the containing rectangle of a set of Nodes */

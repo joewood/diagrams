@@ -1,12 +1,5 @@
-import { InfoOutlineIcon } from "@chakra-ui/icons";
-import {
-    Accordion,
-    AccordionButton,
-    AccordionIcon,
-    AccordionItem,
-    AccordionPanel,
-    Flex
-} from "@chakra-ui/react";
+import { InfoOutlineIcon, PlusSquareIcon } from "@chakra-ui/icons";
+import { Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, Flex } from "@chakra-ui/react";
 import { isEqual, uniq } from "lodash";
 import * as React from "react";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
@@ -32,9 +25,9 @@ function useNavigationState(activePath: string, pages: Page[], parentPath: strin
 }
 
 export interface Page {
-    subPages: Page[];
+    subPages?: Page[];
     name: string;
-    pathPart: string;
+    pathPart?: string;
     icon?: JSX.Element;
 }
 
@@ -47,6 +40,16 @@ export interface NavItemsProps {
 
 export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "", options }) => {
     const [navState, setNavState] = useNavigationState(currentPath, pages, parentPath);
+    const defaultedPages = useMemo(
+        () =>
+            pages.map((p) => ({
+                name: p.name,
+                subPages: p.subPages ?? [],
+                pathPart: p.pathPart ?? encodeURIComponent(p.name.toLowerCase()),
+                icon: p.icon ?? (p.subPages?.length ?? 0) > 0 ? <PlusSquareIcon /> : <InfoOutlineIcon />,
+            })),
+        [pages]
+    );
     const onChange = useCallback(
         (ind: number[]) => {
             const sortedIndices = uniq(ind).sort((a, b) => a - b);
@@ -66,7 +69,7 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
             onChange={onChange}
             maxWidth={`${options.drawerWidth}px`}
         >
-            {pages.map((page) => {
+            {defaultedPages.map((page) => {
                 const pagePath = `${parentPath}/${page.pathPart}`;
                 return (
                     <AccordionItem
@@ -93,12 +96,7 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
                             height={options.itemHeight}
                             alignItems="center"
                         >
-                            <NavItem
-                                link={pagePath}
-                                text={page.name}
-                                icon={page.icon ?? <InfoOutlineIcon />}
-                                options={options}
-                            />
+                            <NavItem link={pagePath} text={page.name} icon={page.icon} options={options} />
                             {page.subPages.length > 0 && <AccordionIcon />}
                         </AccordionButton>
                         <AccordionPanel p={0} pl="10px">

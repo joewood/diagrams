@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { keyBy } from "lodash";
 import * as React from "react";
 import { memo, useMemo } from "react";
-import { getAnchor, getMidPoint, PositionedEdge, RequiredGraphOptions, transition } from "./model";
+import { getAnchors, getMidPoint, PositionedEdge, RequiredGraphOptions, transition } from "./model";
 import { AbsolutePositionedNode } from "./use-ngraph";
 
 interface Props {
@@ -20,21 +20,19 @@ export const Edges = memo<Props>(({ edges, nodes, options }) => {
         () =>
             edges
                 .map((e) => {
-                    const nodeFrom = nodesDict[e.from];
-                    const nodeTo = nodesDict[e.to];
+                    const nodeFrom = nodesDict[e?.from];
+                    const nodeTo = nodesDict[e?.to];
                     if (!nodeFrom || !nodeTo) {
                         console.warn("cannot find nodes from edge", e);
                         return null;
                     }
-                    const _fromPoint = nodeFrom.absolutePosition;
-                    const _toPoint = nodeTo.absolutePosition;
-                    const midPoint = {
-                        x: getMidPoint(_fromPoint.x, _toPoint.x, 0.5),
-                        y: getMidPoint(_fromPoint.y, _toPoint.y, 0.5),
-                    };
-                    const fromPoint = getAnchor(_fromPoint, nodesDict[e.from].size ?? options.defaultSize, _toPoint);
-                    const toPoint = getAnchor(_toPoint, nodesDict[e.to].size ?? options.defaultSize, _fromPoint);
-                    return { ...e, points: [fromPoint, midPoint, toPoint] };
+                    const [fromPoint, midPoint1, midPoint2, toPoint] = getAnchors(
+                        nodeTo.absolutePosition,
+                        nodesDict[e.to].size ?? options.defaultSize,
+                        nodeFrom.absolutePosition,
+                        nodesDict[e.from].size ?? options.defaultSize
+                    );
+                    return { ...e, points: [fromPoint, midPoint1, midPoint2, toPoint] };
                 })
                 .filter((e) => e !== null),
         [edges, nodesDict, options.defaultSize]
@@ -49,21 +47,22 @@ export const Edges = memo<Props>(({ edges, nodes, options }) => {
                             key={edge.name}
                             layoutId={edge.name}
                             initial={{
-                                d: `M ${edge.points[0].x},${edge.points[0].y} L ${edge.points[2].x},${
-                                    edge!.points[2].y
-                                }`,
+                                d: `M ${edge.points[0].x},${edge.points[0].y} C ${edge.points[1].x},${
+                                    edge!.points[1].y
+                                } ${edge.points[2].x},${edge!.points[2].y} ${edge.points[3].x},${edge!.points[3].y}`,
                                 opacity: 0,
                             }}
                             animate={{
-                                d: `M ${edge!.points[0].x}, ${edge!.points[0].y} L ${edge!.points[2].x}, ${
-                                    edge!.points[2].y
-                                }`,
+                                d: `M ${edge!.points[0].x}, ${edge!.points[0].y} C ${edge!.points[1].x}, ${
+                                    edge!.points[1].y
+                                } ${edge.points[2].x},${edge!.points[2].y}  ${edge.points[3].x},${edge!.points[3].y}`,
                                 opacity: 1,
                             }}
                             stroke={edge!.color ?? "black"}
                             strokeWidth={edge!.thickness ?? options.textSize / 10}
                             markerEnd="url(#arrowhead)"
                             transition={transition}
+                            fill="transparent"
                         />
                     )
             )}
