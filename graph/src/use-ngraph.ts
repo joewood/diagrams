@@ -1,12 +1,13 @@
-import { groupBy, keyBy } from "lodash";
-import createLayout, { Vector } from "ngraph.forcelayout";
+import { groupBy, keyBy, mapValues } from "lodash";
+import createLayout, { Layout, Vector } from "ngraph.forcelayout";
 import createGraph, { Link } from "ngraph.graph";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MiniGraphProps } from "./mini-graph";
 import {
+    ScreenPositionedNode,
+    adjustPosition,
     getContainingRect,
     GraphOptions,
-    HierarchicalNode,
     NGraph,
     NGraphLayout,
     Point,
@@ -23,14 +24,35 @@ export function useChanged<T>(name: string, x: T) {
     useEffect(() => console.log(`${name} changed.`), [x, name]);
 }
 
-export type AbsolutePositionedNode = PositionedNode & {
-    absolutePosition: Point;
-};
+export function useScreenNodes(
+    nodes: PositionedNode[],
+    parentVirtualPosition: Point,
+    parentVirtualSize: Size,
+    targetSize: Size,
+    targetPosition: Point,
+    padding: number
+): [ScreenPositionedNode[], Record<string, ScreenPositionedNode>] {
+    return useMemo<ReturnType<typeof useScreenNodes>>(() => {
+        const screenNodes = nodes.map((node) => {
+            const screenPosition = adjustPosition(
+                node.position,
+                parentVirtualPosition,
+                parentVirtualSize,
+                targetSize,
+                targetPosition,
+                padding
+            );
+            const topLeft = {x:screenPosition.x-node.size.width/2, y: screenPosition.y-node.size.height/2};
+            return { ...node, screenPosition, parentScreenPosition: targetPosition, screenTopLeft: topLeft };
+        });
+        return [screenNodes, keyBy(screenNodes, (n) => n.name)];
+    }, [nodes, padding, parentVirtualPosition, parentVirtualSize, targetPosition, targetSize]);
+}
 
 export function useEdges() {
     const [posEdges, setEdges] = useState<PositionedEdge[]>([]);
-    const [posNodes, setNodes] = useState<Record<string, AbsolutePositionedNode>>({});
-    const onNodesMoved = useCallback<MiniGraphProps["onNodesPositioned"]>((edges, nodes) => {
+    const [posNodes, setNodes] = useState<Record<string, ScreenPositionedNode>>({});
+    const onNodesMoved = useCallback<MiniGraphProps["onNodesPositioned"]>((name, edges, nodes) => {
         setEdges(edges);
         setNodes((nd) => {
             const x = { ...nd, ...nodes };
@@ -38,38 +60,77 @@ export function useEdges() {
         });
     }, []);
     return [posNodes, posEdges, onNodesMoved] as [
-        Record<string, AbsolutePositionedNode>,
+        Record<string, ScreenPositionedNode>,
         PositionedEdge[],
         MiniGraphProps["onNodesPositioned"]
     ];
 }
 
 /** Simply group nodes by their parent, null means no parent */
-export function useChildrenNodesByParent(nodes: HierarchicalNode[]) {
-    const childrenNodesByParent = useMemo<Record<string, HierarchicalNode[]>>(
-        () => groupBy(nodes, (node) => node.parent),
-        [nodes]
-    );
-    const nodesDict = keyBy(nodes, (n) => n.name);
-    return [childrenNodesByParent, nodesDict] as [Record<string, HierarchicalNode[]>, Record<string, HierarchicalNode>];
+export function useChildrenNodesByParent(
+    nodes: SimpleNode[],
+    parentNode: Record<string, SimpleNode>,
+    options: GraphOptions
+): [Record<string, SimpleNode[]>, Record<string, SimpleNode>] {
+    return useMemo<ReturnType<typeof useChildrenNodesByParent>>(() => {
+        const nodesDict = keyBy(nodes, (n) => n.name);
+        let childrenNodesByParent2 = groupBy(nodes, (node) => node.parent ?? null);
+        const childrenNodesByParent = mapValues(childrenNodesByParent2, (v, k) =>
+            v.map((node) => ({
+                ...node,
+                // initialSize: parentNode[k]?.size ?? options.defaultSize,
+                // initialPosition: parentNode[k]?.position ?? { x: 0, y: 0 },
+            }))
+        );
+        return [childrenNodesByParent, nodesDict];
+    }, [nodes]);
 }
 
-function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2: Point, bottomRight2: Point) {
-    if (topLeft1.x > bottomRight2.x || topLeft2.x > bottomRight1.x) {
+export function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2: Point, bottomRight2: Point) {
+    // To check if either rectangle is actually a line
+    // For example : l1 ={-1,0} r1={1,1} l2={0,-1} r2={0,1}
+    if (
+        topLeft1.x === bottomRight1.x ||
+        topLeft1.y === bottomRight1.y ||
+        topLeft2.x === bottomRight2.x ||
+        topLeft2.y === bottomRight2.y
+    ) {
+        // the line cannot have positive overlap
         return false;
     }
-    if (topLeft1.y > bottomRight2.y || topLeft2.y > bottomRight1.y) {
+
+    // If one rectangle is on left side of other
+    if (topLeft1.x >= bottomRight2.x || topLeft2.x >= bottomRight1.x) {
+        return false;
+    }
+
+    // If one rectangle is above other
+    if (bottomRight1.y <= topLeft2.y || bottomRight2.y <= topLeft1.y) {
         return false;
     }
     return true;
 }
 
-function useLayout(graph: NGraph, options: RequiredGraphOptions) {
+//     if (l1.x > r2.x || l2.x > r1.x) {
+//         return false;
+//     }
+//     if (l1.y > r2.y || l2.y > r1.y) {
+//         return false;
+//     }
+//     return true;
+// }
+
+function useLayout(graph: NGraph, options: RequiredGraphOptions): Layout<NGraph> & { overlapping: boolean } {
     return useMemo(() => {
         // Do the LAYOUT
         const layout = createLayout(graph, options);
+        const overlapping = false;
         layout.forEachBody(
-            (body, id) => (body.mass = 50 * (graph.getNode(id)?.data?.size ?? options.defaultSize).width)
+            (body, id) =>
+                (body.mass =
+                    50 *
+                    (graph.getNode(id)?.data?.size ?? options.defaultSize).width *
+                    (graph.getNode(id)?.data?.size ?? options.defaultSize).height)
         );
         // const qt = new QuadTree(new Box(0, 0, 1000, 1000));
         // graph.forEachNode((n) => {
@@ -84,54 +145,8 @@ function useLayout(graph: NGraph, options: RequiredGraphOptions) {
                 oldPos[n.id] = body?.pos;
             });
             layout.step();
-            graph.forEachNode((node1) => {
-                const body1 = layout.getBody(node1.id);
-                if (!body1 || !node1 || !node1.data || !node1.data.size) return;
-                const staticRect = {
-                    x: body1?.pos.x,
-                    y: body1?.pos.y,
-                    width: node1?.data?.size.width,
-                    height: node1?.data?.size.height,
-                };
-                graph.forEachNode((testNode) => {
-                    const body2 = layout.getBody(testNode.id);
-                    if (!body2 || !testNode || !testNode.data || !testNode.data.size) return;
-                    const testRect = {
-                        x: body2?.pos.x,
-                        y: body2?.pos.y,
-                        width: testNode?.data?.size.width,
-                        height: testNode?.data?.size.height,
-                    };
-                    if (
-                        rectanglesOverlap(
-                            { x: staticRect.x, y: staticRect.y },
-                            { x: staticRect.x + staticRect.width, y: staticRect.y + staticRect.height },
-                            { x: testRect.x, y: testRect.y },
-                            { x: testRect.x + testRect.width, y: testRect.y + testRect.height }
-                        )
-                    ) {
-                        const newPos = { x: testRect.x, y: testRect.y };
-                        if (
-                            testRect.x + testRect.width > staticRect.x &&
-                            testRect.x + testRect.width < staticRect.x + staticRect.width
-                        ) {
-                            newPos.x = oldPos[testNode.id].x;
-                            body2.velocity = { x: 0, y: body2.velocity.y };
-                        }
-                        if (
-                            testRect.y + testRect.height > staticRect.y &&
-                            testRect.y + testRect.height < staticRect.y + staticRect.height
-                        ) {
-                            newPos.y = oldPos[testNode.id].y;
-                            body2.velocity = { x: body2.velocity.x, y: 0 };
-                        }
-                        testRect.x = newPos.x;
-                        testRect.y = newPos.y;
-                    }
-                });
-            });
         }
-        return layout;
+        return { ...layout, overlapping };
     }, [graph, options]);
 }
 
@@ -144,7 +159,7 @@ function getNodesFromLayout(
     layout.forEachBody((body, key) => {
         const simpleNode = nodesDict[key];
         if (!simpleNode) {
-            console.warn(`Found ${key} but not in dict ${nodesDict}`);
+            console.log(`Found ${key} but not in dict ${nodesDict}`);
             return;
         }
         layoutNodes.push({
@@ -153,7 +168,7 @@ function getNodesFromLayout(
             size: simpleNode.size ?? options.defaultSize,
             position: layout.getNodePosition(key),
             backgroundColor: simpleNode.backgroundColor,
-            containerPosition: zeroPoint,
+            parentVirtualPosition: zeroPoint,
         });
     });
     return layoutNodes;
@@ -178,7 +193,7 @@ function getEdgesFromLayout(graph: NGraph, nodesDict: Record<string, PositionedN
 export function useContainingRect(targetArea: Size, positionedNodes: PositionedNode[], textSize: number) {
     // get the containing rectangle
     return useMemo(
-        () => getContainingRect(positionedNodes, targetArea, textSize * 2),
+        () => getContainingRect(positionedNodes, targetArea, textSize),
         [targetArea, positionedNodes, textSize]
     );
 }
@@ -255,17 +270,17 @@ export function useSimpleGraph(
     nodes: SimpleNode[],
     edges: SimpleEdge[],
     options: Pick<Required<GraphOptions>, "defaultSize" | "iterations">
-): [PositionedNode[], PositionedEdge[]] {
+): [PositionedNode[], PositionedEdge[], boolean] {
     const { graph } = useCreateGraph(nodes, edges);
     const _options = useDefaultOptions(options);
     const layout = useLayout(graph, _options);
     const nodesDict = useMemo(() => keyBy(nodes, (n) => n.name), [nodes]);
-    return useMemo<[PositionedNode[], PositionedEdge[]]>(() => {
+    return useMemo<ReturnType<typeof useSimpleGraph>>(() => {
         const positionedNodes = getNodesFromLayout(nodesDict, layout, options);
         const positionedEdges = getEdgesFromLayout(
             graph,
             keyBy(positionedNodes, (node) => node.name)
         );
-        return [positionedNodes, positionedEdges];
+        return [positionedNodes, positionedEdges, layout.overlapping];
     }, [graph, layout, options, nodesDict]);
 }

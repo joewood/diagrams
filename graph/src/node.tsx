@@ -3,13 +3,13 @@ import { motion } from "framer-motion";
 import * as React from "react";
 import { FC, MouseEventHandler, useCallback } from "react";
 import { MiniGraphProps } from "./mini-graph";
-import { PositionedNode } from "./model";
+import { ScreenPositionedNode } from "./model";
 import { TextBox } from "./svg-react";
 
 type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode" | "options";
 
 interface Props extends Pick<MiniGraphProps, ReuseMiniGraphProps> {
-    node: PositionedNode;
+    node: ScreenPositionedNode;
     showExpandButton?: boolean;
     expanded?: boolean;
 }
@@ -30,9 +30,9 @@ export const Node: FC<Props> = ({
     return (
         <TextBox
             key={node.name}
-            initialPosition={node.initialPosition ?? node.position}
+            initialPosition={node.initialScreenPosition ?? node.screenPosition}
             initialSize={node.initialSize ?? node.size}
-            position={node.position}
+            position={node.screenPosition}
             size={node.size}
             name={node.name}
             text={node.name}

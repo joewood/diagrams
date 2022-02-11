@@ -1,6 +1,8 @@
-import { intersection, minBy } from "lodash";
+import { intersection, maxBy, minBy } from "lodash";
 import { Body, Layout as NLayout, PhysicsSettings } from "ngraph.forcelayout";
 import { Graph, Link } from "ngraph.graph";
+import { useMemo } from "react";
+import { rectanglesOverlap } from "./use-ngraph";
 
 export interface Size {
     width: number;
@@ -25,29 +27,44 @@ export interface SimpleNode {
     backgroundColor?: string;
     border?: string;
     shadow?: boolean;
+    /** Name of parent node if hierarchical */
+    parent: string | null;
+    level?: number;
 }
 
 /** Node model */
-export interface HierarchicalNode extends SimpleNode {
-    /** Name of parent node if hierarchical */
-    parent: string | null;
-}
+// export interface HierarchicalNode extends SimpleNode {
+// }
 
 export interface PositionedNode extends SimpleNode {
     position: Point;
     body: Body;
     size: Size;
-    initialPosition?: Point;
+    // initialPosition?: Point;
     initialSize?: Size;
-    containerPosition: Point;
+    parentVirtualPosition: Point;
     expanded?: boolean;
 }
 
-export interface PositionedHierarchicalNode extends HierarchicalNode, PositionedNode {
-    parentNode: PositionedHierarchicalNode | null;
-    size: Size;
-    level: number;
-}
+// export interface PositionedHierarchicalNode extends HierarchicalNode, PositionedNode {
+//     parentNode: PositionedHierarchicalNode | null;
+//     size: Size;
+// }
+
+export type ScreenPositionedNode = Omit<PositionedNode,"position"> & {
+    screenPosition: Point;
+    screenTopLeft: Point;
+    initialScreenPosition?: Point;
+    /** Screen Position that the set of nodes are rendered to */
+    parentScreenPosition: Point;
+};
+
+// export type ScreenPositionedHierarchicalNode = Omit<PositionedHierarchicalNode,"position"> & {
+//     screenPosition: Point;
+//     initialScreenPosition: Point;
+//     parentScreenPosition: Point;
+// };
+
 
 export interface SimpleEdge {
     from: string;
@@ -57,6 +74,8 @@ export interface SimpleEdge {
     color?: string;
     thickness?: number;
     labelColor?: string;
+    hierarchical?: boolean;
+    score?: number;
 }
 
 export interface PositionedEdge extends SimpleEdge {
@@ -66,12 +85,6 @@ export interface PositionedEdge extends SimpleEdge {
     link: Link<SimpleEdge>;
 }
 
-export interface HierarchicalEdge extends SimpleEdge {
-    hierarchical?: boolean;
-    score?: number;
-}
-
-export interface PositionedHierarchicalEdge extends HierarchicalEdge, PositionedEdge {}
 
 export type NGraph = Graph<SimpleNode, SimpleEdge>;
 export type NGraphLayout = NLayout<NGraph>;
@@ -115,95 +128,90 @@ export function getAnchors(
         }
     }
     const min = minBy(distances, (p) => p.distance);
-    if (!min) return [fromPoint,fromPoint,toPoint,toPoint]
+    if (!min) return [fromPoint, fromPoint, toPoint, toPoint];
     // if the point is further down/up than left/right then use bottom/top anchor
     let anchorFrom = min.from;
-    let normalFrom: Point = {
-        x: fromPoint.x + (anchorFrom.x - fromPoint.x) * 2,
-        y: fromPoint.y + (anchorFrom.y - fromPoint.y) * 2,
-    };
     let anchorTo = min.to;
+    const getNormalExtent = (anchor: number, point: number, anchorToAnchorDist: number) => {
+        const pointToAnchor = anchor - point;
+        const dir = abs(pointToAnchor) / (pointToAnchor === 0 ? 1 : pointToAnchor);
+        // console.log("XX " + anchorToAnchorDist, point, anchor, anchor + (anchorToAnchorDist * dir) / 5);
+        return (anchorToAnchorDist * dir) / 2;
+    };
+    let normalFrom: Point = {
+        x: anchorFrom.x + getNormalExtent(anchorFrom.x, fromPoint.x, abs(anchorTo.x - anchorFrom.x)),
+        y: anchorFrom.y + getNormalExtent(anchorFrom.y, fromPoint.y, abs(anchorTo.y - anchorFrom.y)),
+    };
     let normalTo: Point = {
-        x: toPoint.x + (anchorTo.x - toPoint.x) * 2,
-        y: toPoint.y + (anchorTo.y - toPoint.y) * 2,
+        x: anchorTo.x + getNormalExtent(anchorTo.x, toPoint.x, abs(anchorTo.x - anchorFrom.x)),
+        y: anchorTo.y + getNormalExtent(anchorTo.y, toPoint.y, abs(anchorTo.y - anchorFrom.y)),
     };
     return [anchorFrom, normalFrom, normalTo, anchorTo];
 }
 
 /** Calculates the containing rectangle of a set of Nodes */
-export function getContainingRect(nodes: (PositionedNode & SimpleNode)[], fitSize: Size, padding = 0) {
-    const estimate = nodes.reduce(
-        (acc, node) => ({
-            x1: Math.min(acc.x1, node.position.x * 1.1),
-            y1: Math.min(acc.y1, node.position.y * 1.1),
-            x2: Math.max(acc.x2, node.position.x * 1.1),
-            y2: Math.max(acc.y2, node.position.y * 1.1),
-        }),
-        {
-            x1: Number.MAX_SAFE_INTEGER,
-            x2: Number.MIN_SAFE_INTEGER,
-            y1: Number.MAX_SAFE_INTEGER,
-            y2: Number.MIN_SAFE_INTEGER,
+export function getContainingRect(nodes: (PositionedNode & SimpleNode)[], fitSize: Size, padding = 0): [Point, Size] {
+    const sizes: [Size, PositionedNode, PositionedNode][] = [];
+    // we iterate over all node pairs to calculate the width and height.
+    // the width of a node in screen space. the node positions are virtual space.
+    for (const node1 of nodes) {
+        for (const node2 of nodes) {
+            const virtualXDist = node2.position.x - node1.position.x;
+            const virtualWidth =
+                virtualXDist / (1 - (node1.size.width + node2.size.width + 2 * padding) / (2 * fitSize.width));
+            const virtualYDist = node2.position.y - node1.position.y;
+            const virtualHeight =
+                virtualYDist / (1 - (node1.size.height + node2.size.height + 2 * padding) / (2 * fitSize.height));
+            sizes.push([{ width: virtualWidth, height: virtualHeight }, node1, node2]);
         }
-    );
-    const estimateSize = { width: estimate.x2 - estimate.x1, height: estimate.y2 - estimate.y1 };
-    const minMax = nodes.reduce(
-        (acc, node) => ({
-            x1: Math.min(
-                acc.x1,
-                node.position.x - ((node.size.width / 2 + padding) / fitSize.width) * estimateSize.width
-            ),
-            y1: Math.min(
-                acc.y1,
-                node.position.y - ((node.size.height / 2 + padding) / fitSize.height) * estimateSize.height
-            ),
-            x2: Math.max(
-                acc.x2,
-                node.position.x + ((node.size.width / 2 + padding) / fitSize.width) * estimateSize.width
-            ),
-            y2: Math.max(
-                acc.y2,
-                node.position.y + ((node.size.height / 2 + padding) / fitSize.height) * estimateSize.height
-            ),
-        }),
-        {
-            x1: Number.MAX_SAFE_INTEGER,
-            x2: Number.MIN_SAFE_INTEGER,
-            y1: Number.MAX_SAFE_INTEGER,
-            y2: Number.MIN_SAFE_INTEGER,
-        }
-    );
-    return [
-        { x: minMax.x1, y: minMax.y1 },
-        { width: minMax.x2 - minMax.x1, height: minMax.y2 - minMax.y1 },
-    ] as [Point, Size];
+    }
+    // select the widest and tallest node pair
+    const widest = maxBy(sizes, (s) => s[0].width);
+    const tallest = maxBy(sizes, (s) => s[0].height);
+    if (!widest || !tallest)
+        return [
+            { x: 0, y: 0 },
+            { width: 100, height: 100 },
+        ];
+    // R = S/M
+    // Pm = Ps / R
+    // Pm = Ps *M/S
+    const topLeft = {
+        x: widest[1].position.x - ((widest[1].size.width + 2 * padding) * widest[0].width) / fitSize.width,
+        y: tallest[1].position.y - ((tallest[1].size.height + 2 * padding) * tallest[0].height) / fitSize.height,
+    };
+    const bottomRight = {
+        x: widest[2].position.x + ((widest[2].size.width + 2 * padding) * widest[0].width) / fitSize.width,
+        y: tallest[2].position.y + ((tallest[2].size.height + 2 * padding) * tallest[0].height) / fitSize.height,
+    };
+    return [topLeft, { width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y }] as [Point, Size];
 }
 
 export function getMidPoint(from: number, to: number, delta: number) {
     return (to - from) * delta + from;
 }
 
-export function calculateDistance(
-    edge: HierarchicalEdge,
-    nodeDict: Record<string, HierarchicalNode>,
-    node1: HierarchicalNode,
-    node2: HierarchicalNode,
-    defaultSize: Size
-): number {
-    if (edge.hierarchical) return defaultSize.width;
-    const path1: string[] = [];
-    while (!!node1?.parent) {
-        path1.push(node1.parent);
-        node1 = nodeDict[node1.parent];
-    }
-    const path2: string[] = [];
-    while (!!node2?.parent) {
-        path2.push(node2.parent);
-        node2 = nodeDict[node2.parent];
-    }
-    const distance = path1.length + path2.length - intersection(path1, path2).length;
-    return Math.max(Math.pow((distance * defaultSize.width) / 1, 1), defaultSize.width * 2);
-}
+// export function calculateDistance(
+//     edge: HierarchicalEdge,
+//     nodeDict: Record<string, SimpleNode>,
+//     node1: SimpleNode,
+//     node2: SimpleNode,
+//     defaultSize: Size
+// ): number {
+//     if (edge.hierarchical) return defaultSize.width;
+//     const path1: string[] = [];
+//     while (!!node1?.parent) {
+//         path1.push(node1.parent);
+//         node1 = nodeDict[node1.parent];
+//     }
+//     const path2: string[] = [];
+//     while (!!node2?.parent) {
+//         path2.push(node2.parent);
+//         node2 = nodeDict[node2.parent];
+//     }
+//     const distance = path1.length + path2.length - intersection(path1, path2).length;
+//     return Math.max(Math.pow((distance * defaultSize.width) / 1, 1), defaultSize.width * 2);
+// }
 
 export const transition = {
     type: "easeInOut",
@@ -215,13 +223,21 @@ export function adjustPosition(
     virtualTopLeft: Point,
     virtualSize: Size,
     targetSize: Size,
-    targetPosition?: Point
+    targetPosition?: Point,
+    padding = 0
 ) {
     return {
-        x: ((virtualPoint.x - virtualTopLeft.x) / virtualSize.width) * targetSize.width + (targetPosition?.x ?? 0),
-        y: ((virtualPoint.y - virtualTopLeft.y) / virtualSize.height) * targetSize.height + (targetPosition?.y ?? 0),
+        x:
+            ((virtualPoint.x - virtualTopLeft.x) / virtualSize.width) * targetSize.width +
+            (targetPosition?.x ?? 0) +
+            padding,
+        y:
+            ((virtualPoint.y - virtualTopLeft.y) / virtualSize.height) * targetSize.height +
+            (targetPosition?.y ?? 0) +
+            padding,
     };
 }
+
 
 export type NumericOpts = "gravity" | "springCoefficient" | "springLength" | "dragCoefficient" | "theta" | "textSize";
 export type PhysicsSettingsBag = {
@@ -281,3 +297,76 @@ export const physicsMeta: PhysicsSettingsBag = {
         default: 10,
     },
 };
+
+export function getOverlap(adjustedNodes: ScreenPositionedNode[]): [boolean, boolean] {
+    let overlapping = false;
+    const overlapPadding = 1.1;
+    let paddedOverlapping = false;
+    const shrinkPadding = 1.3;
+    if (adjustedNodes.length < 2) return [false, true];
+    for (const node1 of adjustedNodes) {
+        const rect1 = { ...node1.screenPosition, ...node1.size };
+        for (const node2 of adjustedNodes) {
+            if (node2 === node1) continue;
+            const rect2 = { ...node2.screenPosition, ...node2.size };
+            overlapping =
+                overlapping ||
+                rectanglesOverlap(
+                    {
+                        x: rect1.x - (rect1.width / 2) * overlapPadding,
+                        y: rect1.y - (rect1.height / 2) * overlapPadding,
+                    },
+                    {
+                        x: rect1.x + (rect1.width / 2) * overlapPadding,
+                        y: rect1.y + (rect1.height / 2) * overlapPadding,
+                    },
+                    {
+                        x: rect2.x - (rect2.width / 2) * overlapPadding,
+                        y: rect2.y - (rect2.height / 2) * overlapPadding,
+                    },
+                    {
+                        x: rect2.x + (rect2.width / 2) * overlapPadding,
+                        y: rect2.y + (rect2.height / 2) * overlapPadding,
+                    }
+                );
+            // we test if there's any overlap with a padding around the rec
+            // if there's no overlap then we can probably shrink the targetArea
+            paddedOverlapping =
+                paddedOverlapping ||
+                rectanglesOverlap(
+                    {
+                        x: rect1.x - (rect1.width / 2) * shrinkPadding,
+                        y: rect1.y - (rect1.height / 2) * shrinkPadding,
+                    },
+                    {
+                        x: rect1.x + (rect1.width / 2) * shrinkPadding,
+                        y: rect1.y + (rect1.height / 2) * shrinkPadding,
+                    },
+                    {
+                        x: rect2.x - (rect2.width / 2) * shrinkPadding,
+                        y: rect2.y - (rect2.height / 2) * shrinkPadding,
+                    },
+                    {
+                        x: rect2.x + (rect2.width / 2) * shrinkPadding,
+                        y: rect2.y + (rect2.height / 2) * shrinkPadding,
+                    }
+                );
+            // if any overlap, then we need to grow the target area. Quit.
+            if (overlapping) break;
+        }
+        if (overlapping) break;
+    }
+    return [overlapping, paddedOverlapping];
+}
+
+export function getVisibleNode(
+    node: SimpleNode,
+    leafNodes: Record<string, SimpleNode>,
+    nodesDict: Record<string, SimpleNode>,
+    expanded: string[]
+) {
+    while (!!node && node.parent !== null && !(leafNodes[node.name] || expanded.includes(node.parent))) {
+        node = nodesDict[node.parent ?? null];
+    }
+    return node;
+}

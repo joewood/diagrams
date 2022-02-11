@@ -29,7 +29,6 @@ export const DemoGraphThreeDeep: FC<{
                 edges={edges}
                 onExpandToggleNode={onExpandToggleNode}
                 expanded={expanded}
-                
                 onSelectNode={onSelectNode}
                 selectedNode={selectedNode}
                 options={options}

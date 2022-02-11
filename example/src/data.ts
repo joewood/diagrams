@@ -1,4 +1,4 @@
-import { SimpleEdge, SimpleNode, HierarchicalNode } from "@diagrams/graph";
+import { SimpleEdge, SimpleNode } from "@diagrams/graph";
 import { isArray, uniq } from "lodash";
 
 interface Tree {
@@ -49,12 +49,8 @@ const styleMap: Record<string, Omit<SimpleNode, "name" | "positionHint" | "type"
  * Or sub-branch of tree, parentNode is the node created and added
  * Or string leaf branch, return node
  */
-function branchToNodeArray(
-    tree: Tree | string[] | null,
-    branchName?: string,
-    parentNode?: HierarchicalNode
-): HierarchicalNode[] {
-    const node: HierarchicalNode | undefined =
+function branchToNodeArray(tree: Tree | string[] | null, branchName?: string, parentNode?: SimpleNode): SimpleNode[] {
+    const node: SimpleNode | undefined =
         (branchName && {
             ...(parentNode ?? {}),
             ...(styleMap[branchName] ?? {}),
@@ -83,10 +79,10 @@ export const edges: SimpleEdge[] = [
 ].map((e) => ({ ...e, name: `${e.from} -> ${e.to}` }));
 const connectedNodes = edges.reduce<string[]>((p, c) => [...p, c.from, c.to], []);
 
-export const nodesL3: HierarchicalNode[] = branchToNodeArray(nodeTree);
+export const nodesL3: SimpleNode[] = branchToNodeArray(nodeTree);
 const roots = nodesL3.filter((node) => !node.parent).map((node) => node.name);
 const parents = uniq(nodesL3.map((node) => node.parent).filter(Boolean));
-export const nodesL2: HierarchicalNode[] = branchToNodeArray(nodeTree)
+export const nodesL2: SimpleNode[] = branchToNodeArray(nodeTree)
     .filter((node) => !!node.parent)
     .map((node) => ({ ...node, parent: node.parent && roots.includes(node.parent) ? null : node.parent }));
 export const nodesLeaf: SimpleNode[] = branchToNodeArray(nodeTree)

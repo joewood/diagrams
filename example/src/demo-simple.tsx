@@ -10,7 +10,7 @@ export const DemoGraphSimple: FC<{
     const [selected, setSelected] = useState<string | null>(null);
     const options = useDefaultOptions(_options);
     const onSelect = useCallback(({ name }: { name: string }) => {
-        setSelected(name);
+        setSelected((prev) => (name === prev ? null : name));
     }, []);
     const largeNodes = useMemo(
         () =>

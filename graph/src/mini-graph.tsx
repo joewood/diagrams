@@ -1,14 +1,12 @@
 import { motion } from "framer-motion";
-import { keyBy } from "lodash";
 import * as React from "react";
-import { memo, useEffect, useMemo } from "react";
+import { memo, useEffect } from "react";
 import {
-    adjustPosition,
+    getOverlap,
     Point,
     PositionedEdge,
-    PositionedHierarchicalNode,
-    PositionedNode,
     RequiredGraphOptions,
+    ScreenPositionedNode,
     SimpleEdge,
     SimpleNode,
     Size,
@@ -16,20 +14,21 @@ import {
     zeroPoint,
 } from "./model";
 import { Node } from "./node";
-import { AbsolutePositionedNode, useContainingRect, useSimpleGraph } from "./use-ngraph";
+import { useChanged, useContainingRect, useScreenNodes, useSimpleGraph } from "./use-ngraph";
 
 export interface MiniGraphProps {
     nodes: SimpleNode[];
     edges: SimpleEdge[];
-    targetArea: Size;
-    targetOffset?: Point;
+    screenSize: Size;
+    screenPosition?: Point;
     onSelectNode?: (args: { name: string }) => void;
     onExpandToggleNode?: (args: { name: string; expand: boolean }) => void;
     selectedNode?: string | null;
     name: string;
-    onNodesPositioned: (edges: PositionedEdge[], nodes: Record<string, AbsolutePositionedNode>) => void;
+    onResizeNeeded?: (name: string, overlapping: boolean, shrinking: boolean) => void;
+    onNodesPositioned: (name: string, edges: PositionedEdge[], nodes: Record<string, ScreenPositionedNode>) => void;
     renderNode?: (
-        node: PositionedNode | PositionedHierarchicalNode,
+        node: ScreenPositionedNode,
         onSelectNode: MiniGraphProps["onSelectNode"],
         options: Pick<RequiredGraphOptions, "defaultSize" | "textSize" | "iterations">
     ) => JSX.Element;
@@ -41,56 +40,52 @@ function _MiniGraph({
     nodes,
     onSelectNode,
     selectedNode,
-    targetOffset = zeroPoint,
+    screenPosition = zeroPoint,
     renderNode,
+    onResizeNeeded,
     name,
-    targetArea,
+    screenSize,
     onExpandToggleNode,
     onNodesPositioned,
     options,
 }: MiniGraphProps) {
-    // useChanged("edges", edges);
-    // useChanged("onSelectNode", nodes);
-    // useChanged("targetOffset", targetOffset);
-    // useChanged("renderNode", renderNode);
-    // useChanged("name", name);
-    // useChanged("targetArea", targetArea);
-    // useChanged("onNodesPositioned", onNodesPositioned);
-    // useChanged("options", options);
+    useChanged("SN edges", edges);
+    useChanged("SN nodes", nodes);
+    useChanged("SN targetOffset", screenPosition);
+    useChanged("SN renderNode", renderNode);
+    useChanged("SN name", name);
+    useChanged("SN targetArea", screenSize);
+    useChanged("SN onNodesPositioned", onNodesPositioned);
+    useChanged("SN options", options);
 
     // get the virtual positions of the nodes in a graph
     const [positionedNodes, positionedEdges] = useSimpleGraph(nodes, edges, options);
-
+    const padding = options.textSize;
     // get the containing rectangle
-    const [virtualTopLeft, virtualSize] = useContainingRect(targetArea, positionedNodes, options.textSize);
+    const [virtualTopLeft, virtualSize] = useContainingRect(screenSize, positionedNodes, padding);
     // adjust the position of the nodes to fit within the targetArea
-    const adjustedNodes = useMemo(
-        () =>
-            positionedNodes.map((node) => ({
-                ...node,
-                position: adjustPosition(node.position, virtualTopLeft, virtualSize, targetArea),
-                absolutePosition: adjustPosition(node.position, virtualTopLeft, virtualSize, targetArea, targetOffset),
-                containerPosition: virtualTopLeft,
-            })),
-        [positionedNodes, virtualTopLeft, virtualSize, targetArea, targetOffset]
+    const [screenNodes, screenNodesDict] = useScreenNodes(
+        positionedNodes,
+        virtualTopLeft,
+        virtualSize,
+        screenSize,
+        screenPosition ?? zeroPoint,
+        padding
     );
+
     // notify parent graph that a node has been changed
     useEffect(
-        () =>
-            onNodesPositioned?.(
-                positionedEdges,
-                keyBy(adjustedNodes, (n) => n.name)
-            ),
-        [adjustedNodes, onNodesPositioned, positionedEdges]
+        () => onNodesPositioned?.(name, positionedEdges, screenNodesDict),
+        [screenNodes, name, onNodesPositioned, positionedEdges, screenNodesDict]
     );
+    useEffect(() => {
+        const [overlapping, paddedOverlapping] = getOverlap(screenNodes);
+        if (overlapping) console.log("Overlapping");
+        if (overlapping || !paddedOverlapping) onResizeNeeded?.(name, overlapping, !paddedOverlapping);
+    }, [screenNodes, name, onResizeNeeded]);
     return (
-        <motion.g
-            layoutId={name}
-            initial={{ x: targetOffset.x, y: targetOffset.y }}
-            animate={{ x: targetOffset.x, y: targetOffset.y }}
-            transition={transition}
-        >
-            {adjustedNodes.map((node) => (
+        <motion.g layoutId={name} transition={transition}>
+            {screenNodes.map((node) => (
                 <Node
                     key={node.name}
                     node={node}
@@ -102,9 +97,7 @@ function _MiniGraph({
                     options={options}
                 />
             ))}
-            {((renderNode && adjustedNodes.map((node) => renderNode(node, onSelectNode, options))) || []).filter(
-                Boolean
-            )}
+            {((renderNode && screenNodes.map((node) => renderNode(node, onSelectNode, options))) || []).filter(Boolean)}
         </motion.g>
     );
 }

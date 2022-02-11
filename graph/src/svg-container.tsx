@@ -1,9 +1,18 @@
+import { motion } from "framer-motion";
 import * as React from "react";
 import { FC } from "react";
-import { RequiredGraphOptions } from "./model";
+import { RequiredGraphOptions, Size, transition } from "./model";
 
-export const SvgContainer: FC<Pick<RequiredGraphOptions, "textSize">> = ({ children, textSize }) => (
-    <svg width="100%" height="100%">
+interface Props {
+    screenSize?: Size;
+    textSize: RequiredGraphOptions["textSize"];
+}
+
+export const SvgContainer: FC<Props> = ({ children, textSize, screenSize }) => (
+    <motion.svg
+        animate={{ width: screenSize?.width ?? "100%", height: screenSize?.height ?? "100%" }}
+        transition={transition}
+    >
         <defs>
             <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
                 <polygon points="0 0, 10 3.5, 0 7" />
@@ -23,5 +32,5 @@ export const SvgContainer: FC<Pick<RequiredGraphOptions, "textSize">> = ({ child
             </defs>
         </defs>
         {children}
-    </svg>
+    </motion.svg>
 );

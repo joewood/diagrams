@@ -1,35 +1,24 @@
 import { mix } from "chroma-js";
 import { keyBy, mapValues } from "lodash";
 import * as React from "react";
-import { FC, useCallback, useMemo } from "react";
-import { HierarchicalNode } from ".";
+import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Edges } from "./edges";
 import { MiniGraph, MiniGraphProps } from "./mini-graph";
-import { GraphOptions, HierarchicalEdge, SimpleNode, zeroPoint } from "./model";
+import { getVisibleNode, GraphOptions, PositionedEdge, SimpleEdge, SimpleNode, Size, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useChildrenNodesByParent, useDefaultOptions, useEdges } from "./use-ngraph";
+import { useChanged, useChildrenNodesByParent, useDefaultOptions, useEdges } from "./use-ngraph";
 
 type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode";
 
 export interface ExpandableGraphProps extends Pick<Required<MiniGraphProps>, ReuseMiniGraphProps> {
-    nodes: HierarchicalNode[];
-    edges: HierarchicalEdge[];
+    nodes: SimpleNode[];
+    edges: SimpleEdge[];
     expanded: string[];
     options?: GraphOptions;
 }
 
-function getVisibleNode(
-    node: HierarchicalNode,
-    leafNodes: Record<string, SimpleNode>,
-    nodesDict: Record<string, HierarchicalNode>,
-    expanded: string[]
-) {
-    while (!!node && node.parent !== null && !(leafNodes[node.name] || expanded.includes(node.parent))) {
-        node = nodesDict[node.parent];
-    }
-    return node;
-}
+const emptyArray: PositionedEdge[] = [];
 
 export const ExpandableGraph: FC<ExpandableGraphProps> = ({
     edges,
@@ -40,98 +29,148 @@ export const ExpandableGraph: FC<ExpandableGraphProps> = ({
     expanded,
     options: _options = {},
 }) => {
-    // useChanged("edges", edges);
-    // useChanged("nodes", nodes);
-    // useChanged("onSelectNode", onSelectNode);
-    // useChanged("expanded", expanded);
-    // useChanged("options", _options);
+    useChanged("Ex edges", edges);
+    useChanged("Ex nodes", nodes);
+    useChanged("Ex onSelectNode", onSelectNode);
+    useChanged("Ex expanded", expanded);
+    useChanged("Ex options", _options);
 
     const options = useDefaultOptions(_options);
-    const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
+    // const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
+    const [nodeSizes, setNodeSizes] = useState<Record<string, Size>>({});
+    const nodesDict = useMemo(() => keyBy(nodes, (n) => n.name), [nodes]);
+    const topLevelNodes = useMemo(() => nodes.filter((n) => !n.parent), [nodes]);
+    const topLevelNodesDict = useMemo(() => keyBy(topLevelNodes, (l) => l.name), [topLevelNodes]);
+    const [size, setSize] = useState({ width: 100, height: 100 });
 
-    const leafNodes = useMemo(() => nodes.filter((n) => n.parent === null), [nodes]);
-    const leafNodesDict = useMemo(() => keyBy(leafNodes, (l) => l.name), [leafNodes]);
-    const routedEdges = useMemo(() => {
-        const nodesDict = keyBy(nodes, (n) => n.name);
-        const reroutedNodesDict = mapValues(nodesDict, (n) => getVisibleNode(n, leafNodesDict, nodesDict, expanded));
-        const routedEdges = edges.map((edge) => ({
-            ...edge,
-            to: reroutedNodesDict[edge.to].name,
-            from: reroutedNodesDict[edge.from].name,
-        }));
-        return routedEdges;
-    }, [edges, expanded, leafNodesDict, nodes]);
+    // CALLBACKS
+    // Resize Demand - change the state
+    const onResizeGraph = useCallback((name: string, overlapping: boolean, shrinking: boolean) => {
+        if (overlapping) {
+            setSize((old) => ({ width: old.width * 1.1, height: old.height * 1.1 }));
+        }
+        if (shrinking) {
+            setSize((old) => ({ width: old.width * 0.9, height: old.height * 0.9 }));
+        }
+    }, []);
+    const onResizeNode = useCallback(
+        (name: string, overflow: boolean, shrinking: boolean) => {
+            if (overflow) {
+                console.log("overflow " + name, nodeSizes);
+                setNodeSizes((sz) => ({
+                    ...sz,
+                    [name]: {
+                        width: (sz[name]?.width ?? options.defaultSize.width) * 1.1,
+                        height: (sz[name]?.height ?? options.defaultSize.height) * 1.1,
+                    },
+                }));
+            }
+            if (shrinking) {
+                console.log("shrink " + name, nodeSizes);
+                setNodeSizes((sz) => ({
+                    ...sz,
+                    [name]: {
+                        width: (sz[name]?.width ?? options.defaultSize.width) * 0.9,
+                        height: (sz[name]?.height ?? options.defaultSize.height) * 0.9,
+                    },
+                }));
+            }
+        },
+        [nodeSizes, options.defaultSize.height, options.defaultSize.width]
+    );
 
-    const insideNodes = useMemo(
+    // reflect any changes in the expanded by removing size overrides
+    useEffect(() => {
+        setNodeSizes((prev) => {
+            const unExpanded = Object.keys(prev).filter((s) => !expanded.includes(s));
+            const newNodeSizes = { ...prev };
+            let dirty = false;
+            for (const deleteKey of unExpanded) {
+                if (deleteKey in newNodeSizes) {
+                    delete newNodeSizes[deleteKey];
+                    dirty = true;
+                }
+            }
+            return dirty ? newNodeSizes : prev;
+        });
+    }, [expanded]);
+    const [screenNodesDict, posEdges, onNodesMoved] = useEdges();
+
+    const reroutedNodesDict = useMemo(
+        () => mapValues(nodesDict, (n) => getVisibleNode(n, topLevelNodesDict, nodesDict, expanded)),
+        [expanded, topLevelNodesDict, nodesDict]
+    );
+    const routedEdges = useMemo(
+        () =>
+            edges.map((edge) => ({
+                ...edge,
+                to: reroutedNodesDict[edge.to].name,
+                from: reroutedNodesDict[edge.from].name,
+            })),
+        [edges, reroutedNodesDict]
+    );
+
+    const expandedChildNodes = useMemo(
         () => nodes.filter((n) => n.parent !== null && expanded.includes(n.parent)),
         [expanded, nodes]
     );
-    const [nodesByParent] = useChildrenNodesByParent(insideNodes);
-    const largeNodes = useMemo(
+    const [nodesByParent] = useChildrenNodesByParent(expandedChildNodes, screenNodesDict, options);
+    const parentNodes = useMemo(
         () =>
-            leafNodes.map((node) => ({
+            topLevelNodes.map((node) => ({
                 ...node,
-                size: expanded.includes(node.name)
-                    ? {
-                          width: (node.size ?? options.defaultSize).width * 4,
-                          height: (node.size ?? options.defaultSize).height * 4,
-                      }
-                    : node.size,
+                size: nodeSizes[node.name] ?? node.size ?? options.defaultSize,
                 expanded: expanded.includes(node.name),
                 border: expanded.includes(node.name)
                     ? mix(node.backgroundColor ?? "gray", "black", 0.6).css()
                     : mix(node.backgroundColor ?? "gray", "black", 0.3).css(),
                 backgroundColor: mix(node.backgroundColor ?? "gray", "rgba(255,255,255,0)", 0.3).css(),
             })),
-        [expanded, leafNodes, options.defaultSize]
+        [expanded, topLevelNodes, nodeSizes, options.defaultSize]
     );
-    const [posNodesDict, posEdges, onNodesMoved] = useEdges();
-    const renderNode = useCallback<Required<MiniGraphProps>["renderNode"]>(
-        (node) =>
-            (nodesByParent[node.name] && (
+
+    // render a given Node as a sub-graph
+    const renderNodeAsGraph = useCallback<Required<MiniGraphProps>["renderNode"]>(
+        (screenNode, onSelectNode, options) =>
+            (nodesByParent[screenNode.name] && (
                 <MiniGraph
-                    key={node.name + "-graph"}
-                    nodes={nodesByParent[node.name].map((p) => ({
-                        ...p,
-                        initialSize: node.size,
-                        initialPosition: node.position,
-                    }))}
-                    edges={[]}
-                    renderNode={renderNode}
-                    name={node.name + "-graph"}
+                    key={screenNode.name + "-graph"}
+                    nodes={nodesByParent[screenNode.name]}
+                    edges={emptyArray}
+                    renderNode={renderNodeAsGraph}
+                    name={screenNode.name}
                     onSelectNode={onSelectNode}
                     selectedNode={selectedNode}
+                    onResizeNeeded={onResizeNode}
                     onExpandToggleNode={onExpandToggleNode}
-                    targetArea={node.size}
+                    screenSize={screenNode.size}
                     onNodesPositioned={onNodesMoved}
-                    targetOffset={{
-                        x: node.position.x - node.size.width / 2,
-                        y: node.position.y - node.size.height / 2,
-                    }}
+                    screenPosition={screenNode.screenTopLeft}
                     options={options}
                 />
             )) ||
             null,
-        [nodesByParent, onExpandToggleNode, onNodesMoved, onSelectNode, options, selectedNode]
+        [nodesByParent, onExpandToggleNode, onNodesMoved, onResizeNode, selectedNode]
     );
 
     return (
-        <div ref={ref} style={{ width: "100%", height: "100%", display: "block" }}>
-            <SvgContainer key="svg" textSize={options.textSize}>
+        <div style={{ width: "100%", height: "100%", display: "block", overflow: "auto" }}>
+            <SvgContainer key="svg" textSize={options.textSize} screenSize={size}>
                 <MiniGraph
-                    key="top"
-                    nodes={largeNodes}
+                    key="root"
+                    nodes={parentNodes}
                     edges={routedEdges}
                     name="root"
                     options={options}
                     onSelectNode={onSelectNode}
                     onExpandToggleNode={onExpandToggleNode}
-                    targetArea={targetSize}
-                    targetOffset={zeroPoint}
+                    onResizeNeeded={onResizeGraph}
+                    screenSize={size}
+                    screenPosition={zeroPoint}
                     onNodesPositioned={onNodesMoved}
-                    renderNode={renderNode}
+                    renderNode={renderNodeAsGraph}
                 />
-                <Edges key="edges" name="root" edges={posEdges} nodes={posNodesDict} options={options} />
+                <Edges key="edges" name="root" edges={posEdges} nodes={screenNodesDict} options={options} />
             </SvgContainer>
         </div>
     );

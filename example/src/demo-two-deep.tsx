@@ -9,7 +9,7 @@ export const DemoGraphTwoDeep: FC<{
     options: GraphOptions;
 }> = ({ options: _options }) => {
     const [expanded, setExpanded] = useState<string[]>([]);
-    const [selectedNode, setSelectedNode] = useState<string|null>(null);
+    const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const options = useDefaultOptions(_options);
 
     const onExpandToggleNode = useCallback<ExpandableGraphProps["onExpandToggleNode"]>(

@@ -2,11 +2,10 @@ import { motion } from "framer-motion";
 import { keyBy } from "lodash";
 import * as React from "react";
 import { memo, useMemo } from "react";
-import { getAnchors, getMidPoint, PositionedEdge, RequiredGraphOptions, transition } from "./model";
-import { AbsolutePositionedNode } from "./use-ngraph";
+import { ScreenPositionedNode, getAnchors, PositionedEdge, RequiredGraphOptions, transition } from "./model";
 
 interface Props {
-    nodes: Record<string, AbsolutePositionedNode>;
+    nodes: Record<string, ScreenPositionedNode>;
     edges: PositionedEdge[];
     name: string;
     options: Pick<RequiredGraphOptions, "defaultSize" | "textSize" | "iterations">;
@@ -23,13 +22,13 @@ export const Edges = memo<Props>(({ edges, nodes, options }) => {
                     const nodeFrom = nodesDict[e?.from];
                     const nodeTo = nodesDict[e?.to];
                     if (!nodeFrom || !nodeTo) {
-                        console.warn("cannot find nodes from edge", e);
+                        console.log("cannot find nodes from edge", e);
                         return null;
                     }
                     const [fromPoint, midPoint1, midPoint2, toPoint] = getAnchors(
-                        nodeTo.absolutePosition,
+                        nodeTo.screenPosition,
                         nodesDict[e.to].size ?? options.defaultSize,
-                        nodeFrom.absolutePosition,
+                        nodeFrom.screenPosition,
                         nodesDict[e.from].size ?? options.defaultSize
                     );
                     return { ...e, points: [fromPoint, midPoint1, midPoint2, toPoint] };
