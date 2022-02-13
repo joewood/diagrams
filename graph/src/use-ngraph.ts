@@ -62,7 +62,7 @@ export function useScreenNodes(
 
 export type PosSize = { name: string; screenPosition: Point; size: Size };
 
-function updatePosSizes(previousPosSizes: Record<string, PosSize>, newPosSizes: PosSize[], overwriteOnly: boolean) {
+function updatePosSizes(previousPosSizes: Record<string, PosSize>, newPosSizes: PosSize[]) {
     if (!newPosSizes || newPosSizes.length === 0) return previousPosSizes;
     const nextPosSizes = { ...previousPosSizes };
     let anyDirty = false;
@@ -74,78 +74,49 @@ function updatePosSizes(previousPosSizes: Record<string, PosSize>, newPosSizes: 
         // mark this as dirty if the item is missing
         dirty ||= !nextPosSizes[newPosSize.name];
         // skip if it's missing if we're in Overwrite Mode
-        if (overwriteOnly && dirty) continue;
         const nextPosSize = nextPosSizes[newPosSize.name] ?? {
             screenPosition: newPosSize.screenPosition,
             size: newPosSize.size,
             name: newPosSize.name,
         };
         const positionDifferent =
-            !overwriteOnly &&
-            (nextPosSize.screenPosition.x !== newPosSize.screenPosition.x ||
-                nextPosSize.screenPosition.y !== newPosSize.screenPosition.y);
+            nextPosSize.screenPosition.x !== newPosSize.screenPosition.x ||
+            nextPosSize.screenPosition.y !== newPosSize.screenPosition.y;
         const sizeDifferent =
             nextPosSize.size.width !== newPosSize.size.width || nextPosSize.size.height !== newPosSize.size.height;
-        if (newPosSize.name === "One") {
-            if (positionDifferent)
-                console.log(
-                    `For One: position diff ${JSON.stringify(nextPosSize.screenPosition)} ${JSON.stringify(
-                        newPosSize.screenPosition
-                    )}`
-                );
-            if (sizeDifferent)
-                console.log(
-                    `For One: size diff ${JSON.stringify(nextPosSize.size)} ${JSON.stringify(newPosSize.size)}`
-                );
-        }
+        // if (newPosSize.name === "One") {
+        //     if (positionDifferent)
+        //         console.log(
+        //             `For One: position diff ${JSON.stringify(nextPosSize.screenPosition)} ${JSON.stringify(
+        //                 newPosSize.screenPosition
+        //             )}`
+        //         );
+        //     if (sizeDifferent)
+        //         console.log(
+        //             `For One: size diff ${JSON.stringify(nextPosSize.size)} ${JSON.stringify(newPosSize.size)}`
+        //         );
+        // }
         dirty ||= positionDifferent;
         nextPosSize.screenPosition = newPosSize.screenPosition;
         dirty ||= sizeDifferent;
-        // if (dirty && newPosSize.name === "One")
-        //     console.log(
-        //         `Updating One because it's dirty: ${JSON.stringify(nextPosSize)} vs ${JSON.stringify(newPosSize)}`
-        //     );
         nextPosSize.size = newPosSize.size;
         if (dirty) nextPosSizes[newPosSize.name] = nextPosSize;
         anyDirty ||= dirty;
     }
-    if (anyDirty && nextPosSizes["One"])
-        console.log("Updating 'One' in PosSize " + JSON.stringify(nextPosSizes["Data"]));
+    // if (anyDirty && nextPosSizes["One"])
+    //     console.log("Updating 'One' in PosSize " + JSON.stringify(nextPosSizes["Data"]));
     if (anyDirty) return nextPosSizes;
     return previousPosSizes;
 }
 
-export function useScreenPositionTracker(
-    name: string /* logging */,
-    localMode?: boolean
-): [Record<string, PosSize>, MiniGraphProps["onNodesPositioned"]] {
+export function useBubbledPositions(): [Record<string, PosSize>, MiniGraphProps["onBubblePositions"]] {
     const [trackPositions, setTrackPositions] = useState<Record<string, PosSize>>({});
-    const onNodesPositioned = useCallback<MiniGraphProps["onNodesPositioned"]>(
-        (posSizes, overwriteOnly) => {
-            // console.log(`Nodes Local:${!!localMode} Positioned for ${name} : ${posSizes.length}`);
-            setTrackPositions((prev) => updatePosSizes(prev, posSizes, !!localMode ? !!overwriteOnly : false));
-        },
-        [localMode, name]
-    );
+    const onNodesPositioned = useCallback<MiniGraphProps["onBubblePositions"]>((posSizes) => {
+        // console.log(`Nodes Local:${!!localMode} Positioned for ${name} : ${posSizes.length}`);
+        setTrackPositions((prev) => updatePosSizes(prev, posSizes));
+    }, []);
     return [trackPositions, onNodesPositioned];
 }
-
-// export function useScreenSizeTracker(
-//     name: string,
-// ): [Record<string, Size>, MiniGraphProps["onNodesPositioned"]] {
-//     const [localTrackPositions, setLocalTrackPositions] = useState<Record<string, PosSize>>(
-//         // keyBy(
-//         //     newPosSizes.map(({ name, screenPosition, size }) => ({ name, screenPosition, size })),
-//         //     (k) => k.name
-//         // )
-//         {}
-//     );
-//     const onNodesPositioned = useCallback<MiniGraphProps["onNodesPositioned"]>((posSizes, overwriteOnly) => {
-//         console.log("Nodes Posed " + posSizes.length);
-//         setLocalTrackPositions((prev) => updatePosSize(prev, posSizes, !!overwriteOnly));
-//     }, []);
-//     return [localTrackPositions, onNodesPositioned];
-// }
 
 /** Simply group nodes by their parent, null means no parent */
 export function useChildrenNodesByParent(simpleNodes: SimpleNode[]): Record<string, SimpleNode[]> {
@@ -177,7 +148,11 @@ export function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2
     return true;
 }
 
-function useLayout(graph: NGraph, sizeOverrides: Record<string,Size>, options: RequiredGraphOptions): Layout<NGraph> & { overlapping: boolean } {
+function useLayout(
+    graph: NGraph,
+    sizeOverrides: Record<string, Size>,
+    options: RequiredGraphOptions
+): Layout<NGraph> & { overlapping: boolean } {
     return useMemo(() => {
         // Do the LAYOUT
         const layout = createLayout(graph, options);
@@ -187,7 +162,7 @@ function useLayout(graph: NGraph, sizeOverrides: Record<string,Size>, options: R
                 (body.mass =
                     50 *
                     (sizeOverrides[id] ?? graph.getNode(id)?.data?.size ?? options.defaultSize).width *
-                    (sizeOverrides[id] ??graph.getNode(id)?.data?.size ?? options.defaultSize).height) /
+                    (sizeOverrides[id] ?? graph.getNode(id)?.data?.size ?? options.defaultSize).height) /
                 (options.defaultSize.width * options.defaultSize.height)
         );
         // const qt = new QuadTree(new Box(0, 0, 1000, 1000));
@@ -332,7 +307,7 @@ export function useDefaultOptions({
 export function useSimpleGraph(
     nodes: SimpleNode[],
     edges: SimpleEdge[],
-    sizeOverrides: Record<string,Size>,
+    sizeOverrides: Record<string, Size>,
     options: Pick<Required<GraphOptions>, "defaultSize" | "iterations">
 ): [PositionedNode[], PositionedEdge[], boolean] {
     const { graph } = useCreateGraph(nodes, edges);

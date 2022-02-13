@@ -1,7 +1,7 @@
 import { mix } from "chroma-js";
 import { motion } from "framer-motion";
 import * as React from "react";
-import { FC, MouseEventHandler, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, MouseEventHandler, useCallback, useMemo } from "react";
 import { SimpleNode } from ".";
 import { MiniGraph, MiniGraphProps } from "./mini-graph";
 import { PositionedEdge, ScreenPositionedNode, Size, transition } from "./model";
@@ -11,14 +11,19 @@ import { useGraphResize } from "./use-ngraph";
 export interface NodeProps
     extends Pick<
         MiniGraphProps,
-        "onSelectNode" | "selectedNode" | "onExpandToggleNode" | "options" | "onNodesPositioned" | "onGetSubgraph"
+        | "onSelectNode"
+        | "selectedNode"
+        | "onExpandToggleNode"
+        | "options"
+        | "expanded"
+        | "onBubblePositions"
+        | "onGetSubgraph"
     > {
     screenNode: ScreenPositionedNode;
     subNodes?: SimpleNode[];
     onResizeNode: (name: string, sizeOverride: Size | null) => void;
-
     showExpandButton?: boolean;
-    expanded?: boolean;
+    isExpanded?: boolean;
 }
 const emptyArray: PositionedEdge[] = [];
 
@@ -31,19 +36,26 @@ export const Node: FC<NodeProps> = ({
     subNodes,
     onSelectNode,
     selectedNode,
-    onNodesPositioned: parentOnNodesPositioned,
+    onBubblePositions,
     onExpandToggleNode,
     onResizeNode,
     onGetSubgraph,
     expanded,
+    isExpanded,
     options,
 }) => {
+    if (screenNode.name === "Network") {
+        console.log("NODE NETWORK ", subNodes?.length);
+    }
+    if (screenNode.name === "Network") {
+        console.log("NODE NETWORK ", isExpanded);
+    }
     const onClick = useCallback<MouseEventHandler<SVGTextElement>>(
-        () => onExpandToggleNode?.({ name: screenNode.name, expand: !expanded }),
-        [expanded, screenNode.name, onExpandToggleNode]
+        () => onExpandToggleNode?.({ name: screenNode.name, expand: !isExpanded }),
+        [isExpanded, screenNode.name, onExpandToggleNode]
     );
     // request for expansion or shrink handled here, size is updated
-    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode, expanded);
+    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode, isExpanded);
     const screenTopLeft = useMemo(
         () => ({
             x: screenNode.screenPosition.x - screenNode.size.width / 2,
@@ -86,11 +98,11 @@ export const Node: FC<NodeProps> = ({
                             y: options.textSize * 2,
                         }}
                     >
-                        {expanded ? "-" : "+"}
+                        {isExpanded ? "-" : "+"}
                     </motion.text>
                 )}
             </TextBox>
-            {expanded && subNodes && subNodes.length > 0 && (
+            {isExpanded && subNodes && subNodes.length > 0 && (
                 <MiniGraph
                     key={screenNode.name + "-graph"}
                     simpleNodes={subNodes}
@@ -101,8 +113,9 @@ export const Node: FC<NodeProps> = ({
                     onResizeNeeded={onResizeNeeded}
                     onGetSubgraph={onGetSubgraph}
                     onExpandToggleNode={onExpandToggleNode}
+                    expanded={expanded}
                     screenSize={screenNode.size}
-                    onNodesPositioned={parentOnNodesPositioned}
+                    onBubblePositions={onBubblePositions}
                     screenPosition={screenTopLeft}
                     options={options}
                 />

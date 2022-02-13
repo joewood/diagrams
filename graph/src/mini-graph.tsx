@@ -1,8 +1,8 @@
 import * as React from "react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { getOverlap, Point, RequiredGraphOptions, SimpleEdge, SimpleNode, Size } from "./model";
 import { Node, NodeProps } from "./node";
-import { PosSize, useChanged, useContainingRect, useScreenNodes, useSimpleGraph } from "./use-ngraph";
+import { PosSize, useContainingRect, useScreenNodes, useSimpleGraph } from "./use-ngraph";
 
 export interface MiniGraphProps {
     simpleNodes: SimpleNode[];
@@ -11,10 +11,11 @@ export interface MiniGraphProps {
     screenPosition: Point;
     onSelectNode?: (args: { name: string }) => void;
     onExpandToggleNode?: (args: { name: string; expand: boolean }) => void;
+    expanded: string[];
     selectedNode?: string | null;
     name: string;
     onResizeNeeded: (name: string, overlapping: boolean, shrinking: boolean) => void;
-    onNodesPositioned: (nodes: PosSize[], overwriteOnly?: boolean) => void;
+    onBubblePositions: (nodes: PosSize[]) => void;
     onGetSubgraph?: (name: string) => SimpleNode[];
     options: Pick<RequiredGraphOptions, "defaultSize" | "textSize" | "iterations">;
 }
@@ -35,15 +36,16 @@ export const MiniGraph = memo<MiniGraphProps>(
         name,
         screenSize,
         onExpandToggleNode,
-        onNodesPositioned: parentOnNodesPositioned,
+        expanded,
+        onBubblePositions,
         options,
     }) => {
-        useChanged("SN edges", simpleEdges);
-        useChanged("SN nodes", simpleNodes);
-        useChanged("SN targetOffset", screenPosition);
-        useChanged("SN name", name);
-        useChanged("SN targetArea", screenSize);
-        useChanged("SN options", options);
+        // useChanged("SN edges", simpleEdges);
+        // useChanged("SN nodes", simpleNodes);
+        // useChanged("SN targetOffset", screenPosition);
+        // useChanged("SN name", name);
+        // useChanged("SN targetArea", screenSize);
+        // useChanged("SN options", options);
 
         const [localSizeOverrides, setLocalSizeOverrides] = useState<Record<string, Size>>({});
         // get the virtual positions of the nodes in a graph. This is unbounded.
@@ -89,8 +91,8 @@ export const MiniGraph = memo<MiniGraphProps>(
             });
         }, []);
         useEffect(() => {
-            parentOnNodesPositioned?.(screenNodes);
-        }, [parentOnNodesPositioned, screenNodes]);
+            onBubblePositions?.(screenNodes);
+        }, [onBubblePositions, screenNodes]);
         // notify parent graph that a node has been changed
         useEffect(() => {
             const [overlapping, paddedOverlapping] = getOverlap(screenNodes);
@@ -106,13 +108,14 @@ export const MiniGraph = memo<MiniGraphProps>(
                     <Node
                         key={node.name}
                         screenNode={node}
-                        showExpandButton={!!onExpandToggleNode}
+                        showExpandButton={(onGetSubgraph?.(node.name)?.length ?? 0) > 0}
                         subNodes={onGetSubgraph?.(node.name)}
                         onExpandToggleNode={onExpandToggleNode}
-                        expanded={node.expanded}
+                        isExpanded={expanded.includes(node.name)}
+                        expanded={expanded}
                         onSelectNode={onSelectNode}
                         onGetSubgraph={onGetSubgraph}
-                        onNodesPositioned={parentOnNodesPositioned}
+                        onBubblePositions={onBubblePositions}
                         onResizeNode={onResizeNode}
                         selectedNode={selectedNode}
                         options={options}

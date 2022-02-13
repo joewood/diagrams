@@ -7,7 +7,7 @@ import { MiniGraph, MiniGraphProps } from "./mini-graph";
 import { getVisibleNode, GraphOptions, Size, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useChanged, useChildrenNodesByParent, useDefaultOptions, useScreenPositionTracker } from "./use-ngraph";
+import { useChanged, useChildrenNodesByParent, useDefaultOptions, useBubbledPositions } from "./use-ngraph";
 
 // type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode" |"";
 
@@ -62,8 +62,8 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         const nodesDict = useMemo(() => keyBy(simpleNodes, (n) => n.name), [simpleNodes]);
         const topLevelNodes = useMemo(() => simpleNodes.filter((n) => !n.parent), [simpleNodes]);
         const topLevelNodesDict = useMemo(() => keyBy(topLevelNodes, (l) => l.name), [topLevelNodes]);
-    
-        const [edgeNodePositions, onBubblePositions] = useScreenPositionTracker("Expandable");
+
+        const [edgeNodePositions, onBubblePositions] = useBubbledPositions();
 
         const reroutedNodesDict = useMemo(
             () => mapValues(nodesDict, (n) => getVisibleNode(n, topLevelNodesDict, nodesDict, expanded)),
@@ -80,7 +80,13 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         );
 
         const nodesByParent = useChildrenNodesByParent(simpleNodes);
-        const onGetSubgraph = useCallback((name: string) => nodesByParent[name], [nodesByParent]);
+        const onGetSubgraph = useCallback(
+            (name: string) => {
+                console.log("GET SUB GRAPH: "+name, nodesByParent[name]?.length);
+                return nodesByParent[name];
+            },
+            [nodesByParent]
+        );
         const parentNodes = useMemo(
             () =>
                 topLevelNodes.map((node) => ({
@@ -118,13 +124,20 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                             selectedNode={selectedNode}
                             onGetSubgraph={onGetSubgraph}
                             onExpandToggleNode={onExpandToggleNode}
+                            expanded={expanded}
                             onResizeNeeded={onResizeNeeded}
                             screenSize={graphSize}
                             screenPosition={zeroPoint}
-                            onNodesPositioned={onBubblePositions}
+                            onBubblePositions={onBubblePositions}
                         />
                     )}
-                    <Edges key="edges" name="root" edges={routedEdges} positionDict={edgeNodePositions} options={options} />
+                    <Edges
+                        key="edges"
+                        name="root"
+                        edges={routedEdges}
+                        positionDict={edgeNodePositions}
+                        options={options}
+                    />
                 </SvgContainer>
             </div>
         );

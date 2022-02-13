@@ -5,7 +5,7 @@ import { MiniGraph, MiniGraphProps } from "./mini-graph";
 import { GraphOptions, Size, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useDefaultOptions, useScreenPositionTracker } from "./use-ngraph";
+import { useDefaultOptions, useBubbledPositions } from "./use-ngraph";
 
 interface SimpleGraphProps
     extends Pick<Required<MiniGraphProps>, "onSelectNode" | "selectedNode" | "simpleNodes" | "simpleEdges"> {
@@ -44,7 +44,7 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
         setGraphSize((oldGraphSize) => (!oldGraphSize ? defaultContainerSize : oldGraphSize));
     }, [defaultContainerSize]);
     const options = useDefaultOptions(_options);
-    const [edgeNodePositions, onBubblePositions] = useScreenPositionTracker("Simple");
+    const [edgeNodePositions, onBubblePositions] = useBubbledPositions();
     return (
         <div key="root" ref={ref} style={{ width: "100%", height: "100%", display: "block", overflow: "auto" }}>
             <SvgContainer key="svg" textSize={options.textSize} screenSize={graphSize}>
@@ -57,9 +57,10 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
                         onSelectNode={onSelectNode}
                         selectedNode={selectedNode}
                         onResizeNeeded={onResizeNeeded}
+                        expanded={[]}
                         screenSize={graphSize}
                         screenPosition={zeroPoint}
-                        onNodesPositioned={onBubblePositions}
+                        onBubblePositions={onBubblePositions}
                         options={options}
                     />
                 )}
