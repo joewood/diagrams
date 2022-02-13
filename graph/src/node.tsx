@@ -18,9 +18,12 @@ export interface NodeProps
         | "expanded"
         | "onBubblePositions"
         | "onGetSubgraph"
+        | "level"
     > {
     screenNode: ScreenPositionedNode;
     subNodes?: SimpleNode[];
+    backgroundColor: string;
+    borderColor: string;
     onResizeNode: (name: string, sizeOverride: Size | null) => void;
     showExpandButton?: boolean;
     isExpanded?: boolean;
@@ -40,16 +43,13 @@ export const Node: FC<NodeProps> = ({
     onExpandToggleNode,
     onResizeNode,
     onGetSubgraph,
+    backgroundColor,
+    borderColor,
+    level,
     expanded,
     isExpanded,
     options,
 }) => {
-    if (screenNode.name === "Network") {
-        console.log("NODE NETWORK ", subNodes?.length);
-    }
-    if (screenNode.name === "Network") {
-        console.log("NODE NETWORK ", isExpanded);
-    }
     const onClick = useCallback<MouseEventHandler<SVGTextElement>>(
         () => onExpandToggleNode?.({ name: screenNode.name, expand: !isExpanded }),
         [isExpanded, screenNode.name, onExpandToggleNode]
@@ -73,8 +73,8 @@ export const Node: FC<NodeProps> = ({
                 size={screenNode.size}
                 name={screenNode.name}
                 text={screenNode.name}
-                fillColor={screenNode.backgroundColor ?? "gray"}
-                borderColor={screenNode.border ?? mix(screenNode.backgroundColor ?? "gray", "black", 0.3).css()}
+                fillColor={backgroundColor}
+                borderColor={borderColor}
                 borderThickness={selectedNode === screenNode.name ? 2 : 1}
                 verticalAnchor="start"
                 onSelectNode={onSelectNode}
@@ -114,6 +114,7 @@ export const Node: FC<NodeProps> = ({
                     onGetSubgraph={onGetSubgraph}
                     onExpandToggleNode={onExpandToggleNode}
                     expanded={expanded}
+                    level={level}
                     screenSize={screenNode.size}
                     onBubblePositions={onBubblePositions}
                     screenPosition={screenTopLeft}

@@ -5,12 +5,11 @@ import {
     GraphOptions,
     SimpleEdge,
     SimpleNode,
-    useDefaultOptions,
+    useDefaultOptions
 } from "@diagrams/graph";
 import { uniq } from "lodash";
 import * as React from "react";
 import { FC, useCallback, useState } from "react";
-import { edges, nodesL2 } from "./data";
 
 const nodesBasic: SimpleNode[] = [
     {
@@ -18,11 +17,11 @@ const nodesBasic: SimpleNode[] = [
         parent: null,
         shadow: true,
     },
-    // {
-    //     name: "two",
-    //     parent: null,
-    //     shadow: true,
-    // },
+    {
+        name: "two",
+        parent: null,
+        shadow: true,
+    },
     {
         name: "one.1",
         parent: "One",
@@ -31,10 +30,10 @@ const nodesBasic: SimpleNode[] = [
         name: "one.2",
         parent: "One",
     },
-    // {
-    //     name: "two.1",
-    //     parent: "two",
-    // },
+    {
+        name: "two.1",
+        parent: "two",
+    },
 ];
 
 const edges2: SimpleEdge[] = []; //{ from: "one.1", to: "two.1", name: "one-two", label: "one-two" }];

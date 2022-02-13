@@ -1,3 +1,4 @@
+import { mix } from "chroma-js";
 import * as React from "react";
 import { memo, useCallback, useEffect, useState } from "react";
 import { getOverlap, Point, RequiredGraphOptions, SimpleEdge, SimpleNode, Size } from "./model";
@@ -14,6 +15,7 @@ export interface MiniGraphProps {
     expanded: string[];
     selectedNode?: string | null;
     name: string;
+    level: number;
     onResizeNeeded: (name: string, overlapping: boolean, shrinking: boolean) => void;
     onBubblePositions: (nodes: PosSize[]) => void;
     onGetSubgraph?: (name: string) => SimpleNode[];
@@ -34,6 +36,7 @@ export const MiniGraph = memo<MiniGraphProps>(
         onResizeNeeded,
         onGetSubgraph,
         name,
+        level,
         screenSize,
         onExpandToggleNode,
         expanded,
@@ -95,13 +98,12 @@ export const MiniGraph = memo<MiniGraphProps>(
         }, [onBubblePositions, screenNodes]);
         // notify parent graph that a node has been changed
         useEffect(() => {
-            const [overlapping, paddedOverlapping] = getOverlap(screenNodes);
+            const [overlapping, paddedOverlapping] = getOverlap(screenNodes, screenPosition, screenSize);
             if (overlapping || !paddedOverlapping) {
-                console.log(`RESIZING for ${name} ${overlapping},${paddedOverlapping}`);
                 const t = setTimeout(() => onResizeNeeded?.(name, overlapping, !paddedOverlapping), 2);
                 return () => clearTimeout(t);
             }
-        }, [name, onResizeNeeded, screenNodes]);
+        }, [name, onResizeNeeded, screenNodes, screenPosition, screenSize]);
         return (
             <>
                 {screenNodes.map((node) => (
@@ -113,6 +115,13 @@ export const MiniGraph = memo<MiniGraphProps>(
                         onExpandToggleNode={onExpandToggleNode}
                         isExpanded={expanded.includes(node.name)}
                         expanded={expanded}
+                        level={level + 1}
+                        backgroundColor={mix(node.backgroundColor ?? "gray", "rgba(255,255,255,0)", 0.3).css()}
+                        borderColor={mix(
+                            node.backgroundColor ?? "gray",
+                            "rgba(0,0,0,0)",
+                            expanded.includes(node.name) ? 0.6 : 0.3
+                        ).css()}
                         onSelectNode={onSelectNode}
                         onGetSubgraph={onGetSubgraph}
                         onBubblePositions={onBubblePositions}

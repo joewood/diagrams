@@ -279,12 +279,34 @@ export const physicsMeta: PhysicsSettingsBag = {
     },
 };
 
-export function getOverlap(posSizes: PosSize[]): [boolean, boolean] {
+export function getOverlap(posSizes: PosSize[], screenPosition: Point, screenSize: Size): [boolean, boolean] {
     let overlapping = false;
     const overlapPadding = 1.1;
     let paddedOverlapping = false;
     const shrinkPadding = 1.3;
     if (posSizes.length < 2) {
+        if (posSizes.length === 1) {
+            const posSize = { ...posSizes[0].screenPosition, ...posSizes[0].size };
+            const [leftTop, bottomRight] = [
+                {
+                    x: posSize.x - posSize.width / 2,
+                    y: posSize.y - posSize.height / 2,
+                },
+                {
+                    x: posSize.x + posSize.width / 2,
+                    y: posSize.y + posSize.height / 2,
+                },
+            ];
+            if (leftTop.x < screenPosition.x || leftTop.y < screenPosition.y) {
+                return [true, true];
+            }
+            if (
+                bottomRight.x > screenPosition.x + screenSize.width ||
+                bottomRight.y > screenPosition.y + screenSize.height
+            ) {
+                return [true, true];
+            }
+        }
         // console.log("Single Rect " + posSizes[0]?.name);
         return [false, true];
     }
@@ -336,9 +358,6 @@ export function getOverlap(posSizes: PosSize[]): [boolean, boolean] {
                     }
                 );
             // if any overlap, then we need to grow the target area. Quit.
-            if (overlapping) {
-                console.log(`Overlap ${posSize1.name} x ${posSize2.name}`);
-            }
             if (overlapping) break;
         }
         if (overlapping) break;

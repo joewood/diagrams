@@ -68,9 +68,6 @@ function updatePosSizes(previousPosSizes: Record<string, PosSize>, newPosSizes: 
     let anyDirty = false;
     for (const newPosSize of newPosSizes) {
         let dirty = false;
-        if (newPosSize.name === "One") {
-            console.log("UPDATING ONE SIZE: " + JSON.stringify(newPosSize.size));
-        }
         // mark this as dirty if the item is missing
         dirty ||= !nextPosSizes[newPosSize.name];
         // skip if it's missing if we're in Overwrite Mode
@@ -84,18 +81,6 @@ function updatePosSizes(previousPosSizes: Record<string, PosSize>, newPosSizes: 
             nextPosSize.screenPosition.y !== newPosSize.screenPosition.y;
         const sizeDifferent =
             nextPosSize.size.width !== newPosSize.size.width || nextPosSize.size.height !== newPosSize.size.height;
-        // if (newPosSize.name === "One") {
-        //     if (positionDifferent)
-        //         console.log(
-        //             `For One: position diff ${JSON.stringify(nextPosSize.screenPosition)} ${JSON.stringify(
-        //                 newPosSize.screenPosition
-        //             )}`
-        //         );
-        //     if (sizeDifferent)
-        //         console.log(
-        //             `For One: size diff ${JSON.stringify(nextPosSize.size)} ${JSON.stringify(newPosSize.size)}`
-        //         );
-        // }
         dirty ||= positionDifferent;
         nextPosSize.screenPosition = newPosSize.screenPosition;
         dirty ||= sizeDifferent;
@@ -103,8 +88,6 @@ function updatePosSizes(previousPosSizes: Record<string, PosSize>, newPosSizes: 
         if (dirty) nextPosSizes[newPosSize.name] = nextPosSize;
         anyDirty ||= dirty;
     }
-    // if (anyDirty && nextPosSizes["One"])
-    //     console.log("Updating 'One' in PosSize " + JSON.stringify(nextPosSizes["Data"]));
     if (anyDirty) return nextPosSizes;
     return previousPosSizes;
 }
@@ -336,7 +319,7 @@ export function useGraphResize(
     }, [expanded, name, onResizeNode]);
     return useCallback<Required<MiniGraphProps>["onResizeNeeded"]>(
         (name: string, overlapping: boolean, shrinking: boolean) => {
-            console.log(`Expanding: ${name} ${overlapping} ${shrinking} - ` + JSON.stringify(existingSize));
+            // console.log(`Expanding: ${name} ${overlapping} ${shrinking} - ` + JSON.stringify(existingSize));
             onResizeNode(name, {
                 width: existingSize.width * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
                 height: existingSize.height * (overlapping ? 1.1 : shrinking ? 0.9 : 1),

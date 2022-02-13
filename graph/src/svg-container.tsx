@@ -14,7 +14,6 @@ export const SvgContainer: FC<Props> = ({ children, textSize, screenSize }) => {
         <motion.svg
             animate={{ width: screenSize?.width ?? "100%", height: screenSize?.height ?? "100%" }}
             transition={transition}
-            style={{ backgroundColor: "yellow" }}
         >
             <defs>
                 <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">

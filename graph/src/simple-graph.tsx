@@ -19,9 +19,6 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
     selectedNode,
     options: _options = {},
 }) => {
-    // useChanged("edges", edges);
-    // useChanged("onSelectNode", nodes);
-    // useChanged("_options", _options);
 
     const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
     const defaultContainerSize = useMemo(
@@ -58,6 +55,7 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
                         selectedNode={selectedNode}
                         onResizeNeeded={onResizeNeeded}
                         expanded={[]}
+                        level={1}
                         screenSize={graphSize}
                         screenPosition={zeroPoint}
                         onBubblePositions={onBubblePositions}

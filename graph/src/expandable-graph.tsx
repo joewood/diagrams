@@ -30,11 +30,6 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         expanded,
         options: _options = {},
     }) => {
-        useChanged("Ex edges", simpleEdges);
-        useChanged("Ex nodes", simpleNodes);
-        useChanged("Ex onSelectNode", onSelectNode);
-        useChanged("Ex expanded", expanded);
-        useChanged("Ex options", _options);
 
         const options = useDefaultOptions(_options);
 
@@ -82,7 +77,6 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         const nodesByParent = useChildrenNodesByParent(simpleNodes);
         const onGetSubgraph = useCallback(
             (name: string) => {
-                console.log("GET SUB GRAPH: "+name, nodesByParent[name]?.length);
                 return nodesByParent[name];
             },
             [nodesByParent]
@@ -92,10 +86,11 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                 topLevelNodes.map((node) => ({
                     ...node,
                     size: node.size ?? options.defaultSize,
-                    expanded: expanded.includes(node.name),
-                    border: expanded.includes(node.name)
-                        ? mix(node.backgroundColor ?? "gray", "black", 0.6).css()
-                        : mix(node.backgroundColor ?? "gray", "black", 0.3).css(),
+                    border: mix(
+                        node.backgroundColor ?? "gray",
+                        "rgba(0,0,0,0)",
+                        expanded.includes(node.name) ? 0.6 : 0.3
+                    ).css(),
                     backgroundColor: mix(node.backgroundColor ?? "gray", "rgba(255,255,255,0)", 0.3).css(),
                 })),
             [topLevelNodes, options.defaultSize, expanded]
@@ -125,6 +120,7 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                             onGetSubgraph={onGetSubgraph}
                             onExpandToggleNode={onExpandToggleNode}
                             expanded={expanded}
+                            level={1}
                             onResizeNeeded={onResizeNeeded}
                             screenSize={graphSize}
                             screenPosition={zeroPoint}
