@@ -1,11 +1,11 @@
 import * as React from "react";
-import { FC, useMemo } from "react";
+import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Edges } from "./edges";
 import { MiniGraph, MiniGraphProps } from "./mini-graph";
-import { GraphOptions, zeroPoint } from "./model";
+import { GraphOptions, Size, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useDefaultOptions, useGraphResize, useScreenPositionTracker } from "./use-ngraph";
+import { useDefaultOptions, useScreenPositionTracker } from "./use-ngraph";
 
 interface SimpleGraphProps
     extends Pick<Required<MiniGraphProps>, "onSelectNode" | "selectedNode" | "simpleNodes" | "simpleEdges"> {
@@ -25,30 +25,45 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
 
     const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
     const defaultContainerSize = useMemo(
-        () => ({ width: targetSize.width / 2, height: targetSize.height / 2 }),
-        [targetSize.height, targetSize.width]
+        () => (targetSize && { width: targetSize.width / 2, height: targetSize.height / 2 }) || undefined,
+        [targetSize]
     );
-
-    const [graphSize, onResizeGraph] = useGraphResize(undefined, defaultContainerSize,true);
+    // Resize Demand - change the state
+    const [graphSize, setGraphSize] = useState<Size|undefined>();
+    const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((name, overlapping, shrinking) => {
+        setGraphSize(
+            (existingSize) =>
+                (existingSize && {
+                    width: existingSize.width * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
+                    height: existingSize.height * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
+                }) ||
+                undefined
+        );
+    }, []);
+    useEffect(() => {
+        setGraphSize((oldGraphSize) => (!oldGraphSize ? defaultContainerSize : oldGraphSize));
+    }, [defaultContainerSize]);
     const options = useDefaultOptions(_options);
-    const [, posSizeDict, onNodesPositioned] = useScreenPositionTracker([], "Simple");
+    const [edgeNodePositions, onBubblePositions] = useScreenPositionTracker("Simple");
     return (
         <div key="root" ref={ref} style={{ width: "100%", height: "100%", display: "block", overflow: "auto" }}>
-            <SvgContainer key="svg" textSize={options.textSize} screenSize={graphSize ?? defaultContainerSize}>
-                <MiniGraph
-                    key="graph"
-                    name="root"
-                    simpleNodes={simpleNodes}
-                    simpleEdges={simpleEdges}
-                    onSelectNode={onSelectNode}
-                    selectedNode={selectedNode}
-                    onResizeNeeded={onResizeGraph}
-                    screenSize={graphSize ?? defaultContainerSize}
-                    screenPosition={zeroPoint}
-                    onNodesPositioned={onNodesPositioned}
-                    options={options}
-                />
-                <Edges key="edges" name="root" edges={simpleEdges} positionDict={posSizeDict} options={options} />
+            <SvgContainer key="svg" textSize={options.textSize} screenSize={graphSize}>
+                {graphSize && (
+                    <MiniGraph
+                        key="graph"
+                        name="root"
+                        simpleNodes={simpleNodes}
+                        simpleEdges={simpleEdges}
+                        onSelectNode={onSelectNode}
+                        selectedNode={selectedNode}
+                        onResizeNeeded={onResizeNeeded}
+                        screenSize={graphSize}
+                        screenPosition={zeroPoint}
+                        onNodesPositioned={onBubblePositions}
+                        options={options}
+                    />
+                )}
+                <Edges key="edges" name="root" edges={simpleEdges} positionDict={edgeNodePositions} options={options} />
             </SvgContainer>
         </div>
     );

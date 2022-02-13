@@ -19,6 +19,7 @@ import {
     Size,
     zeroPoint,
 } from "./model";
+import { NodeProps } from "./node";
 
 export function useChanged<T>(name: string, x: T) {
     useEffect(() => console.log(`${name} changed.`), [x, name]);
@@ -30,6 +31,7 @@ export function useScreenNodes(
     parentVirtualSize: Size,
     targetSize: Size,
     targetPosition: Point,
+    sizeOverrides: Record<string, Size>,
     padding: number
 ): [ScreenPositionedNode[], Record<string, ScreenPositionedNode>] {
     return useMemo<ReturnType<typeof useScreenNodes>>(() => {
@@ -51,81 +53,99 @@ export function useScreenNodes(
                 ...node,
                 screenPosition,
                 parentScreenPosition: targetPosition,
-                // screenTopLeft: topLeft,
+                size: sizeOverrides[node.name] ?? node.size,
             };
         });
         return [screenNodes, keyBy(screenNodes, (n) => n.name)];
-    }, [nodes, padding, parentVirtualPosition, parentVirtualSize, targetPosition, targetSize]);
+    }, [nodes, padding, parentVirtualPosition, parentVirtualSize, sizeOverrides, targetPosition, targetSize]);
 }
 
 export type PosSize = { name: string; screenPosition: Point; size: Size };
 
-function updatePosSize(
-    trackPositions: Record<string, PosSize>,
-    posSizes: PosSize[],
-    dontAdd: boolean,
-    initial: boolean
-) {
-    if (!posSizes || posSizes.length === 0) return trackPositions;
-    const newTracker = { ...trackPositions };
+function updatePosSizes(previousPosSizes: Record<string, PosSize>, newPosSizes: PosSize[], overwriteOnly: boolean) {
+    if (!newPosSizes || newPosSizes.length === 0) return previousPosSizes;
+    const nextPosSizes = { ...previousPosSizes };
     let anyDirty = false;
-    for (const posSize of posSizes) {
+    for (const newPosSize of newPosSizes) {
         let dirty = false;
-        if (posSize.name === "Data") {
-            console.log("UPDATING DATA SIZE: " + JSON.stringify(posSize.size));
+        if (newPosSize.name === "One") {
+            console.log("UPDATING ONE SIZE: " + JSON.stringify(newPosSize.size));
         }
-        dirty ||= !dontAdd && !newTracker[posSize.name];
-        if (dontAdd && dirty) continue;
-        const mod = newTracker[posSize.name] ?? {
-            screenPosition: posSize.screenPosition,
-            size: posSize.size,
-            name: posSize.name,
+        // mark this as dirty if the item is missing
+        dirty ||= !nextPosSizes[newPosSize.name];
+        // skip if it's missing if we're in Overwrite Mode
+        if (overwriteOnly && dirty) continue;
+        const nextPosSize = nextPosSizes[newPosSize.name] ?? {
+            screenPosition: newPosSize.screenPosition,
+            size: newPosSize.size,
+            name: newPosSize.name,
         };
-        dirty ||=
-            mod.screenPosition.x !== posSize.screenPosition.x || mod.screenPosition.y !== posSize.screenPosition.y;
-        mod.screenPosition = posSize.screenPosition;
-        if (!initial) {
-            dirty ||= mod.size.width !== posSize.size.width || mod.size.height !== posSize.size.height;
-            mod.size = posSize.size;
+        const positionDifferent =
+            !overwriteOnly &&
+            (nextPosSize.screenPosition.x !== newPosSize.screenPosition.x ||
+                nextPosSize.screenPosition.y !== newPosSize.screenPosition.y);
+        const sizeDifferent =
+            nextPosSize.size.width !== newPosSize.size.width || nextPosSize.size.height !== newPosSize.size.height;
+        if (newPosSize.name === "One") {
+            if (positionDifferent)
+                console.log(
+                    `For One: position diff ${JSON.stringify(nextPosSize.screenPosition)} ${JSON.stringify(
+                        newPosSize.screenPosition
+                    )}`
+                );
+            if (sizeDifferent)
+                console.log(
+                    `For One: size diff ${JSON.stringify(nextPosSize.size)} ${JSON.stringify(newPosSize.size)}`
+                );
         }
-        if (dirty) newTracker[posSize.name] = mod;
-        // if (dirty) console.log(`DIRTY NODE ${name}: ${posSize.name} is dirty: ${JSON.stringify(posSize)}`);
+        dirty ||= positionDifferent;
+        nextPosSize.screenPosition = newPosSize.screenPosition;
+        dirty ||= sizeDifferent;
+        // if (dirty && newPosSize.name === "One")
+        //     console.log(
+        //         `Updating One because it's dirty: ${JSON.stringify(nextPosSize)} vs ${JSON.stringify(newPosSize)}`
+        //     );
+        nextPosSize.size = newPosSize.size;
+        if (dirty) nextPosSizes[newPosSize.name] = nextPosSize;
         anyDirty ||= dirty;
     }
-    console.log("DATA SIZE IN STATE " + JSON.stringify(newTracker["Data"]), anyDirty);
-    if (anyDirty) return newTracker;
-    return trackPositions;
+    if (anyDirty && nextPosSizes["One"])
+        console.log("Updating 'One' in PosSize " + JSON.stringify(nextPosSizes["Data"]));
+    if (anyDirty) return nextPosSizes;
+    return previousPosSizes;
 }
 
 export function useScreenPositionTracker(
-    newPosSizes: ScreenPositionedNode[],
-    name: string /* logging */
-): [Record<string, PosSize>, Record<string, PosSize>, MiniGraphProps["onNodesPositioned"]] {
-    const [trackPositions, setTrackPositions] = useState<Record<string, PosSize>>(
-        keyBy(
-            newPosSizes.map(({ name, screenPosition, size }) => ({ name, screenPosition, size })),
-            (k) => k.name
-        )
+    name: string /* logging */,
+    localMode?: boolean
+): [Record<string, PosSize>, MiniGraphProps["onNodesPositioned"]] {
+    const [trackPositions, setTrackPositions] = useState<Record<string, PosSize>>({});
+    const onNodesPositioned = useCallback<MiniGraphProps["onNodesPositioned"]>(
+        (posSizes, overwriteOnly) => {
+            // console.log(`Nodes Local:${!!localMode} Positioned for ${name} : ${posSizes.length}`);
+            setTrackPositions((prev) => updatePosSizes(prev, posSizes, !!localMode ? !!overwriteOnly : false));
+        },
+        [localMode, name]
     );
-    const [localTrackPositions, setLocalTrackPositions] = useState<Record<string, PosSize>>(
-        keyBy(
-            newPosSizes.map(({ name, screenPosition, size }) => ({ name, screenPosition, size })),
-            (k) => k.name
-        )
-    );
-
-    const onNodesPositioned = useCallback<MiniGraphProps["onNodesPositioned"]>((posSizes) => {
-        console.log("Nodes Posed " + posSizes.length);
-        setTrackPositions((prev) => updatePosSize(prev, posSizes, false, false));
-        setLocalTrackPositions((prev) => updatePosSize(prev, posSizes, true, false));
-    }, []);
-    // update the trackPositions only if the screenNodes changed
-    useEffect(() => {
-        setTrackPositions((old) => updatePosSize(old, newPosSizes, false, true));
-        setLocalTrackPositions((old) => updatePosSize(old, newPosSizes, false, true));
-    }, [newPosSizes]);
-    return [localTrackPositions, trackPositions, onNodesPositioned];
+    return [trackPositions, onNodesPositioned];
 }
+
+// export function useScreenSizeTracker(
+//     name: string,
+// ): [Record<string, Size>, MiniGraphProps["onNodesPositioned"]] {
+//     const [localTrackPositions, setLocalTrackPositions] = useState<Record<string, PosSize>>(
+//         // keyBy(
+//         //     newPosSizes.map(({ name, screenPosition, size }) => ({ name, screenPosition, size })),
+//         //     (k) => k.name
+//         // )
+//         {}
+//     );
+//     const onNodesPositioned = useCallback<MiniGraphProps["onNodesPositioned"]>((posSizes, overwriteOnly) => {
+//         console.log("Nodes Posed " + posSizes.length);
+//         setLocalTrackPositions((prev) => updatePosSize(prev, posSizes, !!overwriteOnly));
+//     }, []);
+//     return [localTrackPositions, onNodesPositioned];
+// }
 
 /** Simply group nodes by their parent, null means no parent */
 export function useChildrenNodesByParent(simpleNodes: SimpleNode[]): Record<string, SimpleNode[]> {
@@ -228,11 +248,16 @@ function getEdgesFromLayout(graph: NGraph, nodesDict: Record<string, PositionedN
     return layoutEdges;
 }
 
-export function useContainingRect(targetArea: Size, positionedNodes: PositionedNode[], textSize: number) {
+export function useContainingRect(
+    targetArea: Size,
+    positionedNodes: PositionedNode[],
+    sizeOverride: Record<string, Size>,
+    textSize: number
+) {
     // get the containing rectangle
     return useMemo(
-        () => getContainingRect(positionedNodes, targetArea, textSize),
-        [targetArea, positionedNodes, textSize]
+        () => getContainingRect(positionedNodes, targetArea, sizeOverride, textSize),
+        [positionedNodes, targetArea, sizeOverride, textSize]
     );
 }
 
@@ -325,25 +350,22 @@ export function useSimpleGraph(
 
 /** Useful hook to handle onResizeNeeded for a graph. Simple size is tracked */
 export function useGraphResize(
-    initialSize: Size | undefined,
-    defaultSize: Size,
-    expanded: boolean|undefined
-): [Size | undefined, Required<MiniGraphProps>["onResizeNeeded"]] {
-    const [graphSize, setGraphSize] = useState(initialSize);
+    name: string,
+    existingSize: Size,
+    onResizeNode: NodeProps["onResizeNode"],
+    expanded: boolean | undefined
+): Required<MiniGraphProps>["onResizeNeeded"] {
     useEffect(() => {
-        if (!expanded) setGraphSize(undefined);
-    }, [expanded]);
-    const onResizeGraph = useCallback(
+        if (!expanded) onResizeNode(name, null);
+    }, [expanded, name, onResizeNode]);
+    return useCallback<Required<MiniGraphProps>["onResizeNeeded"]>(
         (name: string, overlapping: boolean, shrinking: boolean) => {
-            setGraphSize((old) => {
-                console.log(`Expanding: ${name} ${overlapping} ${shrinking} - ` + JSON.stringify(old));
-                return {
-                    width: (old ?? defaultSize).width * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
-                    height: (old ?? defaultSize).height * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
-                };
+            console.log(`Expanding: ${name} ${overlapping} ${shrinking} - ` + JSON.stringify(existingSize));
+            onResizeNode(name, {
+                width: existingSize.width * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
+                height: existingSize.height * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
             });
         },
-        [defaultSize]
+        [existingSize, onResizeNode]
     );
-    return [graphSize, onResizeGraph];
 }

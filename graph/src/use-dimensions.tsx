@@ -5,15 +5,12 @@ export function useDimensions<T extends HTMLElement = HTMLDivElement>(): [
     Ref<T>,
     {
         position: Point;
-        size: Size;
+        size: Size | undefined;
     }
 ] {
-    const [{ position, size }, setDimensions] = useState<{ position: Point; size: Size }>({
+    const [{ position, size }, setDimensions] = useState<{ position: Point; size: Size | undefined }>({
         position: zeroPoint,
-        size: {
-            width: 200,
-            height: 200,
-        },
+        size: undefined,
     });
     const ref = useRef<T | null>(null);
     useLayoutEffect(() => {

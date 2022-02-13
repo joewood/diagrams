@@ -1,19 +1,13 @@
 import { mix } from "chroma-js";
 import { keyBy, mapValues } from "lodash";
 import * as React from "react";
-import { FC, memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Edges } from "./edges";
 import { MiniGraph, MiniGraphProps } from "./mini-graph";
 import { getVisibleNode, GraphOptions, Size, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import {
-    useChanged,
-    useChildrenNodesByParent,
-    useDefaultOptions,
-    useGraphResize,
-    useScreenPositionTracker,
-} from "./use-ngraph";
+import { useChanged, useChildrenNodesByParent, useDefaultOptions, useScreenPositionTracker } from "./use-ngraph";
 
 // type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode" |"";
 
@@ -43,18 +37,33 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         useChanged("Ex options", _options);
 
         const options = useDefaultOptions(_options);
+
         const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
         const defaultContainerSize = useMemo(
-            () => ({ width: targetSize.width / 2, height: targetSize.height / 2 }),
-            [targetSize.height, targetSize.width]
+            () => (targetSize && { width: targetSize.width / 2, height: targetSize.height / 2 }) || undefined,
+            [targetSize]
         );
+        // Resize Demand - change the state
+        const [graphSize, setGraphSize] = useState<Size>();
+        const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((name, overlapping, shrinking) => {
+            setGraphSize(
+                (existingSize) =>
+                    (existingSize && {
+                        width: existingSize.width * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
+                        height: existingSize.height * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
+                    }) ||
+                    undefined
+            );
+        }, []);
+        useEffect(() => {
+            setGraphSize((oldGraphSize) => (!oldGraphSize ? defaultContainerSize : oldGraphSize));
+        }, [defaultContainerSize]);
+
         const nodesDict = useMemo(() => keyBy(simpleNodes, (n) => n.name), [simpleNodes]);
         const topLevelNodes = useMemo(() => simpleNodes.filter((n) => !n.parent), [simpleNodes]);
         const topLevelNodesDict = useMemo(() => keyBy(topLevelNodes, (l) => l.name), [topLevelNodes]);
-
-        // Resize Demand - change the state
-        const [graphSize, onResizeGraph] = useGraphResize(undefined, defaultContainerSize, true);
-        const [, posSizes, onNodesPositioned] = useScreenPositionTracker([], "GRAPH");
+    
+        const [edgeNodePositions, onBubblePositions] = useScreenPositionTracker("Expandable");
 
         const reroutedNodesDict = useMemo(
             () => mapValues(nodesDict, (n) => getVisibleNode(n, topLevelNodesDict, nodesDict, expanded)),
@@ -97,23 +106,25 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                     backgroundColor: "#f0f0ff",
                 }}
             >
-                <SvgContainer key="svg" textSize={options.textSize} screenSize={graphSize ?? defaultContainerSize}>
-                    <MiniGraph
-                        key="root"
-                        simpleNodes={parentNodes}
-                        simpleEdges={routedEdges}
-                        name="root"
-                        options={options}
-                        onSelectNode={onSelectNode}
-                        selectedNode={selectedNode}
-                        onGetSubgraph={onGetSubgraph}
-                        onExpandToggleNode={onExpandToggleNode}
-                        onResizeNeeded={onResizeGraph}
-                        screenSize={graphSize ?? defaultContainerSize}
-                        screenPosition={zeroPoint}
-                        onNodesPositioned={onNodesPositioned}
-                    />
-                    <Edges key="edges" name="root" edges={routedEdges} positionDict={posSizes} options={options} />
+                <SvgContainer key="svg" textSize={options.textSize} screenSize={graphSize}>
+                    {graphSize && (
+                        <MiniGraph
+                            key="root"
+                            simpleNodes={parentNodes}
+                            simpleEdges={routedEdges}
+                            name="root"
+                            options={options}
+                            onSelectNode={onSelectNode}
+                            selectedNode={selectedNode}
+                            onGetSubgraph={onGetSubgraph}
+                            onExpandToggleNode={onExpandToggleNode}
+                            onResizeNeeded={onResizeNeeded}
+                            screenSize={graphSize}
+                            screenPosition={zeroPoint}
+                            onNodesPositioned={onBubblePositions}
+                        />
+                    )}
+                    <Edges key="edges" name="root" edges={routedEdges} positionDict={edgeNodePositions} options={options} />
                 </SvgContainer>
             </div>
         );

@@ -14,7 +14,7 @@ import { edges, nodesL2 } from "./data";
 
 const nodesBasic: SimpleNode[] = [
     {
-        name: "one",
+        name: "One",
         parent: null,
         shadow: true,
     },
@@ -25,11 +25,11 @@ const nodesBasic: SimpleNode[] = [
     // },
     {
         name: "one.1",
-        parent: "one",
+        parent: "One",
     },
     {
         name: "one.2",
-        parent: "one",
+        parent: "One",
     },
     // {
     //     name: "two.1",

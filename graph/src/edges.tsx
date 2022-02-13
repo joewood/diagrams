@@ -16,6 +16,7 @@ export const Edges = memo<Props>(({ edges, positionDict, options }) => {
     const layoutEdges = useMemo(
         () =>
             edges
+                .filter((e) => e.from !== e.to)
                 .map((e) => {
                     const nodeFrom = positionDict[e?.from];
                     const nodeTo = positionDict[e?.to];

@@ -135,19 +135,25 @@ export function getAnchors(
 }
 
 /** Calculates the containing rectangle of a set of Nodes */
-export function getContainingRect(nodes: (PositionedNode & SimpleNode)[], fitSize: Size, padding = 0): [Point, Size] {
+export function getContainingRect(
+    nodes: (PositionedNode & SimpleNode)[],
+    fitSize: Size,
+    sizeOverride: Record<string, Size>,
+    padding = 0
+): [Point, Size] {
     const sizes: [Size, PositionedNode, PositionedNode][] = [];
+    const getSize = (node: PositionedNode) => sizeOverride[node.name] ?? node.size;
     // we iterate over all node pairs to calculate the width and height.
     // the width of a node in screen space. the node positions are virtual space.
     if (nodes.length === 1) {
         return [
             {
-                x: nodes[0].position.x - nodes[0].size.width / 2 - padding,
-                y: nodes[0].position.y - nodes[0].size.height / 2 - padding,
+                x: nodes[0].position.x - getSize(nodes[0]).width / 2 - padding,
+                y: nodes[0].position.y - getSize(nodes[0]).height / 2 - padding,
             },
             {
-                width: nodes[0].size.width + 2 * padding,
-                height: nodes[0].size.height + 2 * padding,
+                width: getSize(nodes[0]).width + 2 * padding,
+                height: getSize(nodes[0]).height + 2 * padding,
             },
         ];
     }
@@ -155,10 +161,11 @@ export function getContainingRect(nodes: (PositionedNode & SimpleNode)[], fitSiz
         for (const node2 of nodes) {
             const virtualXDist = node2.position.x - node1.position.x;
             const virtualWidth =
-                virtualXDist / (1 - (node1.size.width + node2.size.width + 2 * padding) / (2 * fitSize.width));
+                virtualXDist / (1 - (getSize(node1).width + getSize(node2).width + 2 * padding) / (2 * fitSize.width));
             const virtualYDist = node2.position.y - node1.position.y;
             const virtualHeight =
-                virtualYDist / (1 - (node1.size.height + node2.size.height + 2 * padding) / (2 * fitSize.height));
+                virtualYDist /
+                (1 - (getSize(node1).height + getSize(node2).height + 2 * padding) / (2 * fitSize.height));
             sizes.push([{ width: virtualWidth, height: virtualHeight }, node1, node2]);
         }
     }
@@ -174,12 +181,12 @@ export function getContainingRect(nodes: (PositionedNode & SimpleNode)[], fitSiz
     // Pm = Ps / R
     // Pm = Ps *M/S
     const topLeft = {
-        x: widest[1].position.x - ((widest[1].size.width + 2 * padding) * widest[0].width) / fitSize.width,
-        y: tallest[1].position.y - ((tallest[1].size.height + 2 * padding) * tallest[0].height) / fitSize.height,
+        x: widest[1].position.x - ((getSize(widest[1]).width + 2 * padding) * widest[0].width) / fitSize.width,
+        y: tallest[1].position.y - ((getSize(tallest[1]).height + 2 * padding) * tallest[0].height) / fitSize.height,
     };
     const bottomRight = {
-        x: widest[2].position.x + ((widest[2].size.width + 2 * padding) * widest[0].width) / fitSize.width,
-        y: tallest[2].position.y + ((tallest[2].size.height + 2 * padding) * tallest[0].height) / fitSize.height,
+        x: widest[2].position.x + ((getSize(widest[2]).width + 2 * padding) * widest[0].width) / fitSize.width,
+        y: tallest[2].position.y + ((getSize(tallest[2]).height + 2 * padding) * tallest[0].height) / fitSize.height,
     };
     return [topLeft, { width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y }] as [Point, Size];
 }
@@ -278,7 +285,7 @@ export function getOverlap(posSizes: PosSize[]): [boolean, boolean] {
     let paddedOverlapping = false;
     const shrinkPadding = 1.3;
     if (posSizes.length < 2) {
-        console.log("Single Rect " + posSizes[0].name);
+        // console.log("Single Rect " + posSizes[0]?.name);
         return [false, true];
     }
     for (const posSize1 of posSizes) {

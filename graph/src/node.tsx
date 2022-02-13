@@ -4,7 +4,7 @@ import * as React from "react";
 import { FC, MouseEventHandler, useCallback, useEffect, useMemo, useState } from "react";
 import { SimpleNode } from ".";
 import { MiniGraph, MiniGraphProps } from "./mini-graph";
-import { PositionedEdge, ScreenPositionedNode, Size } from "./model";
+import { PositionedEdge, ScreenPositionedNode, Size, transition } from "./model";
 import { TextBox } from "./svg-react";
 import { useGraphResize } from "./use-ngraph";
 
@@ -15,6 +15,8 @@ export interface NodeProps
     > {
     screenNode: ScreenPositionedNode;
     subNodes?: SimpleNode[];
+    onResizeNode: (name: string, sizeOverride: Size | null) => void;
+
     showExpandButton?: boolean;
     expanded?: boolean;
 }
@@ -31,6 +33,7 @@ export const Node: FC<NodeProps> = ({
     selectedNode,
     onNodesPositioned: parentOnNodesPositioned,
     onExpandToggleNode,
+    onResizeNode,
     onGetSubgraph,
     expanded,
     options,
@@ -40,27 +43,14 @@ export const Node: FC<NodeProps> = ({
         [expanded, screenNode.name, onExpandToggleNode]
     );
     // request for expansion or shrink handled here, size is updated
-    const [sizeOverride, onResizeNeeded] = useGraphResize(undefined, screenNode.size,expanded);
+    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode, expanded);
     const screenTopLeft = useMemo(
         () => ({
-            x: screenNode.screenPosition.x - (sizeOverride ?? screenNode.size).width / 2,
-            y: screenNode.screenPosition.y - (sizeOverride ?? screenNode.size).height / 2,
+            x: screenNode.screenPosition.x - screenNode.size.width / 2,
+            y: screenNode.screenPosition.y - screenNode.size.height / 2,
         }),
-        [screenNode.screenPosition.x, screenNode.screenPosition.y, screenNode.size, sizeOverride]
+        [screenNode.screenPosition.x, screenNode.screenPosition.y, screenNode.size]
     );
-    // if the current Node changes size or position then let the parent know
-    useEffect(() => {
-        if (screenNode.name === "Data") {
-            console.log("DATA Size:" + JSON.stringify(sizeOverride));
-        }
-        parentOnNodesPositioned([
-            {
-                name: screenNode.name,
-                screenPosition: screenNode.screenPosition,
-                size: sizeOverride ?? screenNode.size,
-            },
-        ]);
-    }, [parentOnNodesPositioned, screenNode.name, screenNode.screenPosition, screenNode.size, sizeOverride]);
     return (
         <>
             <TextBox
@@ -68,7 +58,7 @@ export const Node: FC<NodeProps> = ({
                 initialPosition={screenNode.initialScreenPosition ?? screenNode.screenPosition}
                 initialSize={screenNode.initialSize ?? screenNode.size}
                 position={screenNode.screenPosition}
-                size={sizeOverride ?? screenNode.size}
+                size={screenNode.size}
                 name={screenNode.name}
                 text={screenNode.name}
                 fillColor={screenNode.backgroundColor ?? "gray"}
@@ -87,11 +77,12 @@ export const Node: FC<NodeProps> = ({
                             x: (screenNode.initialSize ?? screenNode.size).width - options.textSize * 2,
                             y: options.textSize * 2,
                         }}
+                        transition={transition}
                         style={{ userSelect: "none" }}
                         cursor="pointer"
                         onClick={onClick}
                         animate={{
-                            x: (sizeOverride ?? screenNode.size).width - options.textSize * 2,
+                            x: screenNode.size.width - options.textSize * 2,
                             y: options.textSize * 2,
                         }}
                     >
@@ -110,7 +101,7 @@ export const Node: FC<NodeProps> = ({
                     onResizeNeeded={onResizeNeeded}
                     onGetSubgraph={onGetSubgraph}
                     onExpandToggleNode={onExpandToggleNode}
-                    screenSize={sizeOverride ?? screenNode.size}
+                    screenSize={screenNode.size}
                     onNodesPositioned={parentOnNodesPositioned}
                     screenPosition={screenTopLeft}
                     options={options}
