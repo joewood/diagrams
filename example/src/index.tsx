@@ -10,6 +10,7 @@ import { DemoGraphSimple } from "./demo-simple";
 import { DemoGraphSimpleBusy } from "./demo-simple-busy";
 import { DemoGraphThreeDeep } from "./demo-three-deep";
 import { DemoGraphTwoDeep } from "./demo-two-deep";
+import { DemoGraphTwoDeepBasic } from "./demo-two-deep-basic";
 
 const Hello: FC = () => (
     <Center height="100%">
@@ -50,6 +51,7 @@ const AppA: FC = () => {
         useDemo(options, DemoGraphSimpleBusy, "Busy Graph"),
     ];
     const expandableGraphs = [
+        useDemo(options, DemoGraphTwoDeepBasic, "Two Deep Basic"),
         useDemo(options, DemoGraphTwoDeep, "Two Deep"),
         useDemo(options, DemoGraphThreeDeep, "Three Deep"),
     ];

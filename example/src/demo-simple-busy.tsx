@@ -38,8 +38,8 @@ export const DemoGraphSimpleBusy: FC<{
     return (
         <Box width="100%" height="100%">
             <SimpleGraph
-                nodes={largeNodes}
-                edges={edges}
+                simpleNodes={largeNodes}
+                simpleEdges={edges}
                 options={options}
                 onSelectNode={onSelect}
                 selectedNode={selected}

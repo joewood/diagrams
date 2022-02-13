@@ -1,11 +1,45 @@
 import { Box } from "@chakra-ui/react";
-import { ExpandableGraph, ExpandableGraphProps, GraphOptions, useDefaultOptions } from "@diagrams/graph";
+import {
+    ExpandableGraph,
+    ExpandableGraphProps,
+    GraphOptions,
+    SimpleEdge,
+    SimpleNode,
+    useDefaultOptions,
+} from "@diagrams/graph";
 import { uniq } from "lodash";
 import * as React from "react";
 import { FC, useCallback, useState } from "react";
 import { edges, nodesL2 } from "./data";
 
-export const DemoGraphTwoDeep: FC<{
+const nodesBasic: SimpleNode[] = [
+    {
+        name: "one",
+        parent: null,
+        shadow: true,
+    },
+    // {
+    //     name: "two",
+    //     parent: null,
+    //     shadow: true,
+    // },
+    {
+        name: "one.1",
+        parent: "one",
+    },
+    {
+        name: "one.2",
+        parent: "one",
+    },
+    // {
+    //     name: "two.1",
+    //     parent: "two",
+    // },
+];
+
+const edges2: SimpleEdge[] = []; //{ from: "one.1", to: "two.1", name: "one-two", label: "one-two" }];
+
+export const DemoGraphTwoDeepBasic: FC<{
     options: GraphOptions;
 }> = ({ options: _options }) => {
     const [expanded, setExpanded] = useState<string[]>([]);
@@ -23,11 +57,8 @@ export const DemoGraphTwoDeep: FC<{
         <Box width="100%" height="100%">
             <ExpandableGraph
                 key="expandable"
-                simpleNodes={nodesL2.map((node) => ({
-                    ...node,
-                    shadow: !node.parent,
-                }))}
-                simpleEdges={edges}
+                simpleNodes={nodesBasic}
+                simpleEdges={edges2}
                 onExpandToggleNode={onExpandToggleNode}
                 expanded={expanded}
                 onSelectNode={onSelectNode}

@@ -88,4 +88,3 @@ export const nodesL2: SimpleNode[] = branchToNodeArray(nodeTree)
 export const nodesLeaf: SimpleNode[] = branchToNodeArray(nodeTree)
     .filter((n) => !parents.includes(n.name) && connectedNodes.includes(n.name))
     .map((n, i) => ({ ...n, size: { width: ((i * 20) % 100) + 100, height: ((i * 20) % 100) + 100 } }));
-console.log("SIMPLE", nodesLeaf);

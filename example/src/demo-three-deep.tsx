@@ -13,20 +13,23 @@ export const DemoGraphThreeDeep: FC<{
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const options = useDefaultOptions(_options);
 
-    const onExpandToggleNode = useCallback<ExpandableGraphProps["onExpandToggleNode"]>(
+    const onExpandToggleNode = useCallback<Required<ExpandableGraphProps>["onExpandToggleNode"]>(
         ({ name, expand }) => setExpanded((exp) => (expand ? uniq([...exp, name]) : exp.filter((e) => e !== name))),
         []
     );
-    const onSelectNode = useCallback<ExpandableGraphProps["onSelectNode"]>(({ name }) => setSelectedNode(name), []);
+    const onSelectNode = useCallback<Required<ExpandableGraphProps>["onSelectNode"]>(
+        ({ name }) => setSelectedNode(name),
+        []
+    );
     return (
         <Box width="100%" height="100%">
             <ExpandableGraph
                 key="expandable"
-                nodes={nodesL3.map((node) => ({
+                simpleNodes={nodesL3.map((node) => ({
                     ...node,
                     shadow: !node.parent,
                 }))}
-                edges={edges}
+                simpleEdges={edges}
                 onExpandToggleNode={onExpandToggleNode}
                 expanded={expanded}
                 onSelectNode={onSelectNode}

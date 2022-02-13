@@ -1,40 +1,38 @@
-import { motion } from "framer-motion";
-import { keyBy } from "lodash";
+import { motion, Point } from "framer-motion";
 import * as React from "react";
 import { memo, useMemo } from "react";
-import { ScreenPositionedNode, getAnchors, PositionedEdge, RequiredGraphOptions, transition } from "./model";
+import { getAnchors, RequiredGraphOptions, SimpleEdge, Size, transition } from "./model";
 
 interface Props {
-    nodes: Record<string, ScreenPositionedNode>;
-    edges: PositionedEdge[];
+    positionDict: Record<string, { screenPosition: Point; size: Size }>;
+    edges: SimpleEdge[];
     name: string;
     options: Pick<RequiredGraphOptions, "defaultSize" | "textSize" | "iterations">;
 }
 
-export const Edges = memo<Props>(({ edges, nodes, options }) => {
+export const Edges = memo<Props>(({ edges, positionDict, options }) => {
     // get the containing rectangle
     // adjust the position of the nodes to fit within the targetArea
-    const nodesDict = useMemo(() => keyBy(nodes, (n) => n.name), [nodes]);
     const layoutEdges = useMemo(
         () =>
             edges
                 .map((e) => {
-                    const nodeFrom = nodesDict[e?.from];
-                    const nodeTo = nodesDict[e?.to];
+                    const nodeFrom = positionDict[e?.from];
+                    const nodeTo = positionDict[e?.to];
                     if (!nodeFrom || !nodeTo) {
                         console.log("cannot find nodes from edge", e);
                         return null;
                     }
                     const [fromPoint, midPoint1, midPoint2, toPoint] = getAnchors(
                         nodeTo.screenPosition,
-                        nodesDict[e.to].size ?? options.defaultSize,
+                        nodeTo.size ?? options.defaultSize,
                         nodeFrom.screenPosition,
-                        nodesDict[e.from].size ?? options.defaultSize
+                        nodeFrom.size ?? options.defaultSize
                     );
                     return { ...e, points: [fromPoint, midPoint1, midPoint2, toPoint] };
                 })
                 .filter((e) => e !== null),
-        [edges, nodesDict, options.defaultSize]
+        [edges, options.defaultSize, positionDict]
     );
 
     return (
