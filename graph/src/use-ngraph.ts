@@ -1,10 +1,9 @@
-import { groupBy, keyBy, mapValues } from "lodash";
+import { groupBy, keyBy } from "lodash";
 import createLayout, { Layout, Vector } from "ngraph.forcelayout";
 import createGraph, { Link } from "ngraph.graph";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MiniGraphProps } from "./mini-graph";
 import {
-    ScreenPositionedNode,
     adjustPosition,
     getContainingRect,
     GraphOptions,
@@ -14,6 +13,7 @@ import {
     PositionedEdge,
     PositionedNode,
     RequiredGraphOptions,
+    ScreenPositionedNode,
     SimpleEdge,
     SimpleNode,
     Size,
@@ -34,6 +34,11 @@ export function useScreenNodes(
 ): [ScreenPositionedNode[], Record<string, ScreenPositionedNode>] {
     return useMemo<ReturnType<typeof useScreenNodes>>(() => {
         const screenNodes = nodes.map((node) => {
+            // console.log(node.name + " Nod Position", node.position);
+            // console.log(node.name + " Nod Parent Virtual Pos", parentVirtualPosition);
+            // console.log(node.name + " Nod Virtual Size", parentVirtualSize);
+            // console.log(node.name + " Nod target Pos", targetPosition);
+
             const screenPosition = adjustPosition(
                 node.position,
                 parentVirtualPosition,
@@ -42,48 +47,91 @@ export function useScreenNodes(
                 targetPosition,
                 padding
             );
-            const topLeft = {x:screenPosition.x-node.size.width/2, y: screenPosition.y-node.size.height/2};
-            return { ...node, screenPosition, parentScreenPosition: targetPosition, screenTopLeft: topLeft };
+            return {
+                ...node,
+                screenPosition,
+                parentScreenPosition: targetPosition,
+                // screenTopLeft: topLeft,
+            };
         });
         return [screenNodes, keyBy(screenNodes, (n) => n.name)];
     }, [nodes, padding, parentVirtualPosition, parentVirtualSize, targetPosition, targetSize]);
 }
 
-export function useEdges() {
-    const [posEdges, setEdges] = useState<PositionedEdge[]>([]);
-    const [posNodes, setNodes] = useState<Record<string, ScreenPositionedNode>>({});
-    const onNodesMoved = useCallback<MiniGraphProps["onNodesPositioned"]>((name, edges, nodes) => {
-        setEdges(edges);
-        setNodes((nd) => {
-            const x = { ...nd, ...nodes };
-            return x;
-        });
+export type PosSize = { name: string; screenPosition: Point; size: Size };
+
+function updatePosSize(
+    trackPositions: Record<string, PosSize>,
+    posSizes: PosSize[],
+    dontAdd: boolean,
+    initial: boolean
+) {
+    if (!posSizes || posSizes.length === 0) return trackPositions;
+    const newTracker = { ...trackPositions };
+    let anyDirty = false;
+    for (const posSize of posSizes) {
+        let dirty = false;
+        if (posSize.name === "Data") {
+            console.log("UPDATING DATA SIZE: " + JSON.stringify(posSize.size));
+        }
+        dirty ||= !dontAdd && !newTracker[posSize.name];
+        if (dontAdd && dirty) continue;
+        const mod = newTracker[posSize.name] ?? {
+            screenPosition: posSize.screenPosition,
+            size: posSize.size,
+            name: posSize.name,
+        };
+        dirty ||=
+            mod.screenPosition.x !== posSize.screenPosition.x || mod.screenPosition.y !== posSize.screenPosition.y;
+        mod.screenPosition = posSize.screenPosition;
+        if (!initial) {
+            dirty ||= mod.size.width !== posSize.size.width || mod.size.height !== posSize.size.height;
+            mod.size = posSize.size;
+        }
+        if (dirty) newTracker[posSize.name] = mod;
+        // if (dirty) console.log(`DIRTY NODE ${name}: ${posSize.name} is dirty: ${JSON.stringify(posSize)}`);
+        anyDirty ||= dirty;
+    }
+    console.log("DATA SIZE IN STATE " + JSON.stringify(newTracker["Data"]), anyDirty);
+    if (anyDirty) return newTracker;
+    return trackPositions;
+}
+
+export function useScreenPositionTracker(
+    newPosSizes: ScreenPositionedNode[],
+    name: string /* logging */
+): [Record<string, PosSize>, Record<string, PosSize>, MiniGraphProps["onNodesPositioned"]] {
+    const [trackPositions, setTrackPositions] = useState<Record<string, PosSize>>(
+        keyBy(
+            newPosSizes.map(({ name, screenPosition, size }) => ({ name, screenPosition, size })),
+            (k) => k.name
+        )
+    );
+    const [localTrackPositions, setLocalTrackPositions] = useState<Record<string, PosSize>>(
+        keyBy(
+            newPosSizes.map(({ name, screenPosition, size }) => ({ name, screenPosition, size })),
+            (k) => k.name
+        )
+    );
+
+    const onNodesPositioned = useCallback<MiniGraphProps["onNodesPositioned"]>((posSizes) => {
+        console.log("Nodes Posed " + posSizes.length);
+        setTrackPositions((prev) => updatePosSize(prev, posSizes, false, false));
+        setLocalTrackPositions((prev) => updatePosSize(prev, posSizes, true, false));
     }, []);
-    return [posNodes, posEdges, onNodesMoved] as [
-        Record<string, ScreenPositionedNode>,
-        PositionedEdge[],
-        MiniGraphProps["onNodesPositioned"]
-    ];
+    // update the trackPositions only if the screenNodes changed
+    useEffect(() => {
+        setTrackPositions((old) => updatePosSize(old, newPosSizes, false, true));
+        setLocalTrackPositions((old) => updatePosSize(old, newPosSizes, false, true));
+    }, [newPosSizes]);
+    return [localTrackPositions, trackPositions, onNodesPositioned];
 }
 
 /** Simply group nodes by their parent, null means no parent */
-export function useChildrenNodesByParent(
-    nodes: SimpleNode[],
-    parentNode: Record<string, SimpleNode>,
-    options: GraphOptions
-): [Record<string, SimpleNode[]>, Record<string, SimpleNode>] {
+export function useChildrenNodesByParent(simpleNodes: SimpleNode[]): Record<string, SimpleNode[]> {
     return useMemo<ReturnType<typeof useChildrenNodesByParent>>(() => {
-        const nodesDict = keyBy(nodes, (n) => n.name);
-        let childrenNodesByParent2 = groupBy(nodes, (node) => node.parent ?? null);
-        const childrenNodesByParent = mapValues(childrenNodesByParent2, (v, k) =>
-            v.map((node) => ({
-                ...node,
-                // initialSize: parentNode[k]?.size ?? options.defaultSize,
-                // initialPosition: parentNode[k]?.position ?? { x: 0, y: 0 },
-            }))
-        );
-        return [childrenNodesByParent, nodesDict];
-    }, [nodes]);
+        return groupBy(simpleNodes, (node) => node.parent ?? null);
+    }, [simpleNodes]);
 }
 
 export function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2: Point, bottomRight2: Point) {
@@ -98,27 +146,16 @@ export function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2
         // the line cannot have positive overlap
         return false;
     }
-
     // If one rectangle is on left side of other
     if (topLeft1.x >= bottomRight2.x || topLeft2.x >= bottomRight1.x) {
         return false;
     }
-
     // If one rectangle is above other
     if (bottomRight1.y <= topLeft2.y || bottomRight2.y <= topLeft1.y) {
         return false;
     }
     return true;
 }
-
-//     if (l1.x > r2.x || l2.x > r1.x) {
-//         return false;
-//     }
-//     if (l1.y > r2.y || l2.y > r1.y) {
-//         return false;
-//     }
-//     return true;
-// }
 
 function useLayout(graph: NGraph, options: RequiredGraphOptions): Layout<NGraph> & { overlapping: boolean } {
     return useMemo(() => {
@@ -130,7 +167,8 @@ function useLayout(graph: NGraph, options: RequiredGraphOptions): Layout<NGraph>
                 (body.mass =
                     50 *
                     (graph.getNode(id)?.data?.size ?? options.defaultSize).width *
-                    (graph.getNode(id)?.data?.size ?? options.defaultSize).height)
+                    (graph.getNode(id)?.data?.size ?? options.defaultSize).height) /
+                (options.defaultSize.width * options.defaultSize.height)
         );
         // const qt = new QuadTree(new Box(0, 0, 1000, 1000));
         // graph.forEachNode((n) => {
@@ -283,4 +321,29 @@ export function useSimpleGraph(
         );
         return [positionedNodes, positionedEdges, layout.overlapping];
     }, [graph, layout, options, nodesDict]);
+}
+
+/** Useful hook to handle onResizeNeeded for a graph. Simple size is tracked */
+export function useGraphResize(
+    initialSize: Size | undefined,
+    defaultSize: Size,
+    expanded: boolean|undefined
+): [Size | undefined, Required<MiniGraphProps>["onResizeNeeded"]] {
+    const [graphSize, setGraphSize] = useState(initialSize);
+    useEffect(() => {
+        if (!expanded) setGraphSize(undefined);
+    }, [expanded]);
+    const onResizeGraph = useCallback(
+        (name: string, overlapping: boolean, shrinking: boolean) => {
+            setGraphSize((old) => {
+                console.log(`Expanding: ${name} ${overlapping} ${shrinking} - ` + JSON.stringify(old));
+                return {
+                    width: (old ?? defaultSize).width * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
+                    height: (old ?? defaultSize).height * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
+                };
+            });
+        },
+        [defaultSize]
+    );
+    return [graphSize, onResizeGraph];
 }

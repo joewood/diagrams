@@ -1,8 +1,7 @@
-import { intersection, maxBy, minBy } from "lodash";
+import { maxBy, minBy } from "lodash";
 import { Body, Layout as NLayout, PhysicsSettings } from "ngraph.forcelayout";
 import { Graph, Link } from "ngraph.graph";
-import { useMemo } from "react";
-import { rectanglesOverlap } from "./use-ngraph";
+import { PosSize, rectanglesOverlap } from "./use-ngraph";
 
 export interface Size {
     width: number;
@@ -46,25 +45,13 @@ export interface PositionedNode extends SimpleNode {
     expanded?: boolean;
 }
 
-// export interface PositionedHierarchicalNode extends HierarchicalNode, PositionedNode {
-//     parentNode: PositionedHierarchicalNode | null;
-//     size: Size;
-// }
-
-export type ScreenPositionedNode = Omit<PositionedNode,"position"> & {
+export type ScreenPositionedNode = Omit<PositionedNode, "position"> & {
     screenPosition: Point;
-    screenTopLeft: Point;
+    // screenTopLeft: Point;
     initialScreenPosition?: Point;
     /** Screen Position that the set of nodes are rendered to */
     parentScreenPosition: Point;
 };
-
-// export type ScreenPositionedHierarchicalNode = Omit<PositionedHierarchicalNode,"position"> & {
-//     screenPosition: Point;
-//     initialScreenPosition: Point;
-//     parentScreenPosition: Point;
-// };
-
 
 export interface SimpleEdge {
     from: string;
@@ -84,7 +71,6 @@ export interface PositionedEdge extends SimpleEdge {
     name: string;
     link: Link<SimpleEdge>;
 }
-
 
 export type NGraph = Graph<SimpleNode, SimpleEdge>;
 export type NGraphLayout = NLayout<NGraph>;
@@ -135,7 +121,6 @@ export function getAnchors(
     const getNormalExtent = (anchor: number, point: number, anchorToAnchorDist: number) => {
         const pointToAnchor = anchor - point;
         const dir = abs(pointToAnchor) / (pointToAnchor === 0 ? 1 : pointToAnchor);
-        // console.log("XX " + anchorToAnchorDist, point, anchor, anchor + (anchorToAnchorDist * dir) / 5);
         return (anchorToAnchorDist * dir) / 2;
     };
     let normalFrom: Point = {
@@ -154,6 +139,18 @@ export function getContainingRect(nodes: (PositionedNode & SimpleNode)[], fitSiz
     const sizes: [Size, PositionedNode, PositionedNode][] = [];
     // we iterate over all node pairs to calculate the width and height.
     // the width of a node in screen space. the node positions are virtual space.
+    if (nodes.length === 1) {
+        return [
+            {
+                x: nodes[0].position.x - nodes[0].size.width / 2 - padding,
+                y: nodes[0].position.y - nodes[0].size.height / 2 - padding,
+            },
+            {
+                width: nodes[0].size.width + 2 * padding,
+                height: nodes[0].size.height + 2 * padding,
+            },
+        ];
+    }
     for (const node1 of nodes) {
         for (const node2 of nodes) {
             const virtualXDist = node2.position.x - node1.position.x;
@@ -191,28 +188,6 @@ export function getMidPoint(from: number, to: number, delta: number) {
     return (to - from) * delta + from;
 }
 
-// export function calculateDistance(
-//     edge: HierarchicalEdge,
-//     nodeDict: Record<string, SimpleNode>,
-//     node1: SimpleNode,
-//     node2: SimpleNode,
-//     defaultSize: Size
-// ): number {
-//     if (edge.hierarchical) return defaultSize.width;
-//     const path1: string[] = [];
-//     while (!!node1?.parent) {
-//         path1.push(node1.parent);
-//         node1 = nodeDict[node1.parent];
-//     }
-//     const path2: string[] = [];
-//     while (!!node2?.parent) {
-//         path2.push(node2.parent);
-//         node2 = nodeDict[node2.parent];
-//     }
-//     const distance = path1.length + path2.length - intersection(path1, path2).length;
-//     return Math.max(Math.pow((distance * defaultSize.width) / 1, 1), defaultSize.width * 2);
-// }
-
 export const transition = {
     type: "easeInOut",
     duration: 0.6,
@@ -237,7 +212,6 @@ export function adjustPosition(
             padding,
     };
 }
-
 
 export type NumericOpts = "gravity" | "springCoefficient" | "springLength" | "dragCoefficient" | "theta" | "textSize";
 export type PhysicsSettingsBag = {
@@ -298,17 +272,20 @@ export const physicsMeta: PhysicsSettingsBag = {
     },
 };
 
-export function getOverlap(adjustedNodes: ScreenPositionedNode[]): [boolean, boolean] {
+export function getOverlap(posSizes: PosSize[]): [boolean, boolean] {
     let overlapping = false;
     const overlapPadding = 1.1;
     let paddedOverlapping = false;
     const shrinkPadding = 1.3;
-    if (adjustedNodes.length < 2) return [false, true];
-    for (const node1 of adjustedNodes) {
-        const rect1 = { ...node1.screenPosition, ...node1.size };
-        for (const node2 of adjustedNodes) {
-            if (node2 === node1) continue;
-            const rect2 = { ...node2.screenPosition, ...node2.size };
+    if (posSizes.length < 2) {
+        console.log("Single Rect " + posSizes[0].name);
+        return [false, true];
+    }
+    for (const posSize1 of posSizes) {
+        const rect1 = { ...posSize1.screenPosition, ...posSize1.size };
+        for (const posSize2 of posSizes) {
+            if (posSize2 === posSize1) continue;
+            const rect2 = { ...posSize2.screenPosition, ...posSize2.size };
             overlapping =
                 overlapping ||
                 rectanglesOverlap(
@@ -352,6 +329,9 @@ export function getOverlap(adjustedNodes: ScreenPositionedNode[]): [boolean, boo
                     }
                 );
             // if any overlap, then we need to grow the target area. Quit.
+            if (overlapping) {
+                console.log(`Overlap ${posSize1.name} x ${posSize2.name}`);
+            }
             if (overlapping) break;
         }
         if (overlapping) break;

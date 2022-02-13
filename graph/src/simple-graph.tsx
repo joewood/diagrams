@@ -1,23 +1,20 @@
 import * as React from "react";
-import { FC, useCallback, useState } from "react";
+import { FC, useMemo } from "react";
 import { Edges } from "./edges";
 import { MiniGraph, MiniGraphProps } from "./mini-graph";
-import { GraphOptions, SimpleEdge, SimpleNode, zeroPoint } from "./model";
+import { GraphOptions, zeroPoint } from "./model";
 import { SvgContainer } from "./svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useDefaultOptions, useEdges } from "./use-ngraph";
+import { useDefaultOptions, useGraphResize, useScreenPositionTracker } from "./use-ngraph";
 
-type ReuseMiniGraphProps = "onSelectNode" | "selectedNode";
-
-interface SimpleGraphProps extends Pick<Required<MiniGraphProps>, ReuseMiniGraphProps> {
-    nodes: SimpleNode[];
-    edges: SimpleEdge[];
+interface SimpleGraphProps
+    extends Pick<Required<MiniGraphProps>, "onSelectNode" | "selectedNode" | "simpleNodes" | "simpleEdges"> {
     options?: GraphOptions;
 }
 
 export const SimpleGraph: FC<SimpleGraphProps> = ({
-    edges,
-    nodes,
+    simpleEdges,
+    simpleNodes,
     onSelectNode,
     selectedNode,
     options: _options = {},
@@ -26,38 +23,32 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
     // useChanged("onSelectNode", nodes);
     // useChanged("_options", _options);
 
-    const [ref, { size: targetArea }] = useDimensions<HTMLDivElement>();
-    const [size, setSize] = useState({ width: 100, height: 100 });
-    const onResize = useCallback(
-        (name:string,overlapping: boolean, shrinking:boolean) => {
-            if (overlapping) {
-                setSize((old) => ({ width: old.width * 1.1, height: old.height * 1.1 }));
-            }
-            if (shrinking) {
-                setSize((old) => ({ width: old.width * 0.9, height: old.height * 0.9 }));
-            }
-        },
-        []
+    const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
+    const defaultContainerSize = useMemo(
+        () => ({ width: targetSize.width / 2, height: targetSize.height / 2 }),
+        [targetSize.height, targetSize.width]
     );
+
+    const [graphSize, onResizeGraph] = useGraphResize(undefined, defaultContainerSize,true);
     const options = useDefaultOptions(_options);
-    const [posNodes, posEdges, onNodesMoved] = useEdges();
+    const [, posSizeDict, onNodesPositioned] = useScreenPositionTracker([], "Simple");
     return (
-        <div key="root" ref={ref} style={{ width: "100%", height: "100%", display: "block", overflow:"auto" }}>
-            <SvgContainer key="svg" textSize={options.textSize} screenSize={size}>
+        <div key="root" ref={ref} style={{ width: "100%", height: "100%", display: "block", overflow: "auto" }}>
+            <SvgContainer key="svg" textSize={options.textSize} screenSize={graphSize ?? defaultContainerSize}>
                 <MiniGraph
                     key="graph"
                     name="root"
-                    nodes={nodes}
-                    edges={edges}
+                    simpleNodes={simpleNodes}
+                    simpleEdges={simpleEdges}
                     onSelectNode={onSelectNode}
                     selectedNode={selectedNode}
-                    onResizeNeeded={onResize}
-                    screenSize={size}
+                    onResizeNeeded={onResizeGraph}
+                    screenSize={graphSize ?? defaultContainerSize}
                     screenPosition={zeroPoint}
-                    onNodesPositioned={onNodesMoved}
+                    onNodesPositioned={onNodesPositioned}
                     options={options}
                 />
-                <Edges key="edges" name="root" edges={posEdges} nodes={posNodes} options={options} />
+                <Edges key="edges" name="root" edges={simpleEdges} positionDict={posSizeDict} options={options} />
             </SvgContainer>
         </div>
     );

@@ -21,6 +21,9 @@
    },
    "scripts": {
       "start": "concurrently --kill-others -n graph,sidebar,example npm:start-graph npm:start-sidebar npm:start-example",
+      "pub": "npm run build-packages && npm run deploy",
+      "build-packages": "npm run build -w graph && npm run build -w sidebar",
+      "deploy": "npm publish -w graph --access-public && npm publish -w sidebar --access-public && npm run deploy -w example",
       "start-graph": "FORCE_COLORS=1 npm start -w graph | cat",
       "start-sidebar": "FORCE_COLORS=1 npm start -w sidebar | cat",
       "start-example": "FORCE_COLORS=1 npm start -w example | cat"
