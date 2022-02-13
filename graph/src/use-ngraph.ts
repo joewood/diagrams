@@ -177,7 +177,7 @@ export function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2
     return true;
 }
 
-function useLayout(graph: NGraph, options: RequiredGraphOptions): Layout<NGraph> & { overlapping: boolean } {
+function useLayout(graph: NGraph, sizeOverrides: Record<string,Size>, options: RequiredGraphOptions): Layout<NGraph> & { overlapping: boolean } {
     return useMemo(() => {
         // Do the LAYOUT
         const layout = createLayout(graph, options);
@@ -186,8 +186,8 @@ function useLayout(graph: NGraph, options: RequiredGraphOptions): Layout<NGraph>
             (body, id) =>
                 (body.mass =
                     50 *
-                    (graph.getNode(id)?.data?.size ?? options.defaultSize).width *
-                    (graph.getNode(id)?.data?.size ?? options.defaultSize).height) /
+                    (sizeOverrides[id] ?? graph.getNode(id)?.data?.size ?? options.defaultSize).width *
+                    (sizeOverrides[id] ??graph.getNode(id)?.data?.size ?? options.defaultSize).height) /
                 (options.defaultSize.width * options.defaultSize.height)
         );
         // const qt = new QuadTree(new Box(0, 0, 1000, 1000));
@@ -332,11 +332,12 @@ export function useDefaultOptions({
 export function useSimpleGraph(
     nodes: SimpleNode[],
     edges: SimpleEdge[],
+    sizeOverrides: Record<string,Size>,
     options: Pick<Required<GraphOptions>, "defaultSize" | "iterations">
 ): [PositionedNode[], PositionedEdge[], boolean] {
     const { graph } = useCreateGraph(nodes, edges);
     const _options = useDefaultOptions(options);
-    const layout = useLayout(graph, _options);
+    const layout = useLayout(graph, sizeOverrides, _options);
     const nodesDict = useMemo(() => keyBy(nodes, (n) => n.name), [nodes]);
     return useMemo<ReturnType<typeof useSimpleGraph>>(() => {
         const positionedNodes = getNodesFromLayout(nodesDict, layout, options);

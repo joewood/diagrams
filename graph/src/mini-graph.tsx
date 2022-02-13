@@ -45,13 +45,13 @@ export const MiniGraph = memo<MiniGraphProps>(
         useChanged("SN targetArea", screenSize);
         useChanged("SN options", options);
 
+        const [localSizeOverrides, setLocalSizeOverrides] = useState<Record<string, Size>>({});
         // get the virtual positions of the nodes in a graph. This is unbounded.
-        const [positionedNodes] = useSimpleGraph(simpleNodes, simpleEdges, options);
+        const [positionedNodes] = useSimpleGraph(simpleNodes, simpleEdges, localSizeOverrides, options);
         // Resize Demand - change the state
 
         const padding = options.textSize;
         // adjust the position of the nodes to fit within the targetArea
-        const [localSizeOverrides, setLocalSizeOverrides] = useState<Record<string, Size>>({});
         // get the containing rectangle of the graph and project it onto screen size and pos
         const [virtualTopLeft, virtualSize] = useContainingRect(
             screenSize,
@@ -72,10 +72,6 @@ export const MiniGraph = memo<MiniGraphProps>(
         // use the screenNodes as the initial positions managing the state of the nodes
         // this is updated using the onNodesPositioned
 
-        // useEffect(() => {
-        //     if (localSizeOverrides["One"])
-        //         console.log("One In MINI Graph " + JSON.stringify(localSizeOverrides["One"]));
-        // }, [localSizeOverrides]);
         const onResizeNode = useCallback<NodeProps["onResizeNode"]>((name, size) => {
             setLocalSizeOverrides((oldSize) => {
                 if (!size) {
