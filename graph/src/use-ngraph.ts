@@ -28,24 +28,14 @@ export function useChanged<T>(name: string, x: T) {
 export function useScreenNodes(
     nodes: PositionedNode[],
     parentVirtualPosition: Point,
-    parentVirtualSize: Size,
-    r:number,
-    targetSize: Size,
+    r: number,
     targetPosition: Point,
     sizeOverrides: Record<string, Size>,
     padding: number
 ): [ScreenPositionedNode[], Record<string, ScreenPositionedNode>] {
     return useMemo<ReturnType<typeof useScreenNodes>>(() => {
         const screenNodes = nodes.map((node) => {
-            const screenPosition = adjustPosition(
-                node.position,
-                parentVirtualPosition,
-                parentVirtualSize,
-                r,
-                targetSize,
-                targetPosition,
-                padding
-            );
+            const screenPosition = adjustPosition(node.position, parentVirtualPosition, r, targetPosition, padding);
             return {
                 ...node,
                 screenPosition,
@@ -54,7 +44,7 @@ export function useScreenNodes(
             };
         });
         return [screenNodes, keyBy(screenNodes, (n) => n.name)];
-    }, [nodes, padding, parentVirtualPosition, parentVirtualSize, r, sizeOverrides, targetPosition, targetSize]);
+    }, [nodes, padding, parentVirtualPosition, r, sizeOverrides, targetPosition]);
 }
 
 export type PosSize = { name: string; screenPosition: Point; size: Size };

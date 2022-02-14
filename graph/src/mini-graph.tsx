@@ -58,7 +58,7 @@ export const MiniGraph = memo<MiniGraphProps>(
         const padding = options.textSize;
         // adjust the position of the nodes to fit within the targetArea
         // get the containing rectangle of the graph and project it onto screen size and pos
-        const [virtualTopLeft, virtualSize,r] = useContainingRect(
+        const [virtualTopLeft, virtualSize, r] = useContainingRect(
             screenSize,
             positionedNodes,
             localSizeOverrides,
@@ -68,9 +68,7 @@ export const MiniGraph = memo<MiniGraphProps>(
         const [screenNodes] = useScreenNodes(
             positionedNodes,
             virtualTopLeft,
-            virtualSize,
             r,
-            screenSize,
             screenPosition,
             localSizeOverrides,
             padding
@@ -97,7 +95,12 @@ export const MiniGraph = memo<MiniGraphProps>(
         useEffect(() => onBubblePositions?.(screenNodes), [onBubblePositions, screenNodes]);
         // notify parent graph that a node has been changed
         useEffect(() => {
-            const [overlapping, paddedOverlapping] = getOverlap(screenNodes, options.textSize, screenPosition, screenSize);
+            const [overlapping, paddedOverlapping] = getOverlap(
+                screenNodes,
+                options.textSize,
+                screenPosition,
+                screenSize
+            );
             if (overlapping || !paddedOverlapping) {
                 const t = setTimeout(() => onResizeNeeded?.(name, overlapping, !paddedOverlapping), 2);
                 return () => clearTimeout(t);
@@ -115,10 +118,10 @@ export const MiniGraph = memo<MiniGraphProps>(
                         isExpanded={expanded.includes(node.name)}
                         expanded={expanded}
                         level={level + 1}
-                        backgroundColor={mix(node.backgroundColor ?? "gray", "rgba(255,255,255,0)", 0.3).css()}
+                        backgroundColor={mix(node.backgroundColor ?? "gray", "rgba(255,255,255,0)", 0.4).css()}
                         borderColor={mix(
                             node.backgroundColor ?? "gray",
-                            "rgba(0,0,0,0)",
+                            "rgba(0,0,0,0.5)",
                             expanded.includes(node.name) ? 0.6 : 0.3
                         ).css()}
                         onSelectNode={onSelectNode}

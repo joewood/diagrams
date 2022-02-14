@@ -172,7 +172,7 @@ export function getContainingRect(
         f = fitnessFit(nodes, fitSize, r);
         index++;
     } while (f > 0 && index < 25);
-    console.log("FITNESS " + index + " " + f);
+    // console.log("FITNESS " + index + " " + f);
     const x1 = Math.min(...nodes.map((n) => n.position.x - getWidth(n) / r));
     const y1 = Math.min(...nodes.map((n) => n.position.y - getHeight(n) / r));
     const x2 = Math.max(...nodes.map((n) => n.position.x + getWidth(n) / r));
@@ -198,9 +198,7 @@ export const transition = {
 export function adjustPosition(
     virtualPoint: Point,
     virtualTopLeft: Point,
-    virtualSize: Size,
     r: number,
-    screenSize: Size,
     screenPosition?: Point,
     paddingScreen = 0
 ) {
