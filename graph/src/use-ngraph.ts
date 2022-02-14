@@ -29,6 +29,7 @@ export function useScreenNodes(
     nodes: PositionedNode[],
     parentVirtualPosition: Point,
     parentVirtualSize: Size,
+    r:number,
     targetSize: Size,
     targetPosition: Point,
     sizeOverrides: Record<string, Size>,
@@ -36,15 +37,11 @@ export function useScreenNodes(
 ): [ScreenPositionedNode[], Record<string, ScreenPositionedNode>] {
     return useMemo<ReturnType<typeof useScreenNodes>>(() => {
         const screenNodes = nodes.map((node) => {
-            // console.log(node.name + " Nod Position", node.position);
-            // console.log(node.name + " Nod Parent Virtual Pos", parentVirtualPosition);
-            // console.log(node.name + " Nod Virtual Size", parentVirtualSize);
-            // console.log(node.name + " Nod target Pos", targetPosition);
-
             const screenPosition = adjustPosition(
                 node.position,
                 parentVirtualPosition,
                 parentVirtualSize,
+                r,
                 targetSize,
                 targetPosition,
                 padding
@@ -57,7 +54,7 @@ export function useScreenNodes(
             };
         });
         return [screenNodes, keyBy(screenNodes, (n) => n.name)];
-    }, [nodes, padding, parentVirtualPosition, parentVirtualSize, sizeOverrides, targetPosition, targetSize]);
+    }, [nodes, padding, parentVirtualPosition, parentVirtualSize, r, sizeOverrides, targetPosition, targetSize]);
 }
 
 export type PosSize = { name: string; screenPosition: Point; size: Size };
@@ -148,11 +145,6 @@ function useLayout(
                     (sizeOverrides[id] ?? graph.getNode(id)?.data?.size ?? options.defaultSize).height) /
                 (options.defaultSize.width * options.defaultSize.height)
         );
-        // const qt = new QuadTree(new Box(0, 0, 1000, 1000));
-        // graph.forEachNode((n) => {
-        //     const body = layout.getBody(n.id);
-        //     if (body) qt.insert(getPointsFromBox(body.pos.x, body.pos.y, n.data.size.width, n.data.size.height));
-        // });
         for (let i = 0; i < options.iterations; ++i) {
             const oldPos: Record<string, Vector> = {};
             graph.forEachNode((n) => {
@@ -163,7 +155,7 @@ function useLayout(
             layout.step();
         }
         return { ...layout, overlapping };
-    }, [graph, options]);
+    }, [graph, options, sizeOverrides]);
 }
 
 function getNodesFromLayout(

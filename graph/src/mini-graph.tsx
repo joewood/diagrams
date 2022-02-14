@@ -58,7 +58,7 @@ export const MiniGraph = memo<MiniGraphProps>(
         const padding = options.textSize;
         // adjust the position of the nodes to fit within the targetArea
         // get the containing rectangle of the graph and project it onto screen size and pos
-        const [virtualTopLeft, virtualSize] = useContainingRect(
+        const [virtualTopLeft, virtualSize,r] = useContainingRect(
             screenSize,
             positionedNodes,
             localSizeOverrides,
@@ -69,6 +69,7 @@ export const MiniGraph = memo<MiniGraphProps>(
             positionedNodes,
             virtualTopLeft,
             virtualSize,
+            r,
             screenSize,
             screenPosition,
             localSizeOverrides,
@@ -93,17 +94,15 @@ export const MiniGraph = memo<MiniGraphProps>(
                 return oldSize;
             });
         }, []);
-        useEffect(() => {
-            onBubblePositions?.(screenNodes);
-        }, [onBubblePositions, screenNodes]);
+        useEffect(() => onBubblePositions?.(screenNodes), [onBubblePositions, screenNodes]);
         // notify parent graph that a node has been changed
         useEffect(() => {
-            const [overlapping, paddedOverlapping] = getOverlap(screenNodes, screenPosition, screenSize);
+            const [overlapping, paddedOverlapping] = getOverlap(screenNodes, options.textSize, screenPosition, screenSize);
             if (overlapping || !paddedOverlapping) {
                 const t = setTimeout(() => onResizeNeeded?.(name, overlapping, !paddedOverlapping), 2);
                 return () => clearTimeout(t);
             }
-        }, [name, onResizeNeeded, screenNodes, screenPosition, screenSize]);
+        }, [name, onResizeNeeded, options.textSize, screenNodes, screenPosition, screenSize]);
         return (
             <>
                 {screenNodes.map((node) => (

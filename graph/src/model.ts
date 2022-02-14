@@ -1,6 +1,7 @@
 import { maxBy, minBy } from "lodash";
 import { Body, Layout as NLayout, PhysicsSettings } from "ngraph.forcelayout";
 import { Graph, Link } from "ngraph.graph";
+import { useGraphOptions } from ".";
 import { PosSize, rectanglesOverlap } from "./use-ngraph";
 
 export interface Size {
@@ -140,55 +141,49 @@ export function getContainingRect(
     fitSize: Size,
     sizeOverride: Record<string, Size>,
     padding = 0
-): [Point, Size] {
-    const sizes: [Size, PositionedNode, PositionedNode][] = [];
+): [Point, Size, number] {
     const getSize = (node: PositionedNode) => sizeOverride[node.name] ?? node.size;
-    // we iterate over all node pairs to calculate the width and height.
-    // the width of a node in screen space. the node positions are virtual space.
-    if (nodes.length === 1) {
-        return [
-            {
-                x: nodes[0].position.x - getSize(nodes[0]).width / 2 - padding,
-                y: nodes[0].position.y - getSize(nodes[0]).height / 2 - padding,
-            },
-            {
-                width: getSize(nodes[0]).width + 2 * padding,
-                height: getSize(nodes[0]).height + 2 * padding,
-            },
-        ];
+    const getWidth = (node: PositionedNode) => getSize(node).width / 2 + padding;
+    const getHeight = (node: PositionedNode) => getSize(node).height / 2 + padding;
+
+    function fitnessFit(nodes: PositionedNode[], screenArea: Size, r: number) {
+        const width =
+            Math.max(...nodes.map((n) => n.position.x * r + getWidth(n))) -
+            Math.min(...nodes.map((n) => n.position.x * r - getWidth(n)));
+        const height =
+            Math.max(...nodes.map((n) => n.position.y * r + getHeight(n))) -
+            Math.min(...nodes.map((n) => n.position.y * r - getHeight(n)));
+
+        return Math.max(width - screenArea.width, height - screenArea.height);
     }
-    for (const node1 of nodes) {
-        for (const node2 of nodes) {
-            const virtualXDist = node2.position.x - node1.position.x;
-            const virtualWidth =
-                virtualXDist / (1 - (getSize(node1).width + getSize(node2).width + 2 * padding) / (2 * fitSize.width));
-            const virtualYDist = node2.position.y - node1.position.y;
-            const virtualHeight =
-                virtualYDist /
-                (1 - (getSize(node1).height + getSize(node2).height + 2 * padding) / (2 * fitSize.height));
-            sizes.push([{ width: virtualWidth, height: virtualHeight }, node1, node2]);
-        }
-    }
-    // select the widest and tallest node pair
-    const widest = maxBy(sizes, (s) => s[0].width);
-    const tallest = maxBy(sizes, (s) => s[0].height);
-    if (!widest || !tallest)
-        return [
-            { x: 0, y: 0 },
-            { width: 100, height: 100 },
-        ];
-    // R = S/M
-    // Pm = Ps / R
-    // Pm = Ps *M/S
-    const topLeft = {
-        x: widest[1].position.x - ((getSize(widest[1]).width + 2 * padding) * widest[0].width) / fitSize.width,
-        y: tallest[1].position.y - ((getSize(tallest[1]).height + 2 * padding) * tallest[0].height) / fitSize.height,
+
+    // we start guessing the 'R' value by getting the distance between the mid - points
+    const distanceX = Math.max(...nodes.map((n) => n.position.x)) - Math.min(...nodes.map((n) => n.position.x));
+    const distanceY = Math.max(...nodes.map((n) => n.position.y)) - Math.min(...nodes.map((n) => n.position.y));
+
+    let r = Math.min(
+        fitSize.width / Math.max(distanceX, nodes[0].size.width),
+        fitSize.height / Math.max(distanceY, nodes[0].size.height)
+    );
+    let index = 0;
+    let f = 100;
+    do {
+        r = r * 0.95;
+        f = fitnessFit(nodes, fitSize, r);
+        index++;
+    } while (f > 0 && index < 25);
+    console.log("FITNESS " + index + " " + f);
+    const x1 = Math.min(...nodes.map((n) => n.position.x - getWidth(n) / r));
+    const y1 = Math.min(...nodes.map((n) => n.position.y - getHeight(n) / r));
+    const x2 = Math.max(...nodes.map((n) => n.position.x + getWidth(n) / r));
+    const y2 = Math.max(...nodes.map((n) => n.position.y + getHeight(n) / r));
+
+    const topLeft = { x: x1, y: y1 };
+    const size = {
+        width: y2 - topLeft.x,
+        height: x2 - topLeft.y,
     };
-    const bottomRight = {
-        x: widest[2].position.x + ((getSize(widest[2]).width + 2 * padding) * widest[0].width) / fitSize.width,
-        y: tallest[2].position.y + ((getSize(tallest[2]).height + 2 * padding) * tallest[0].height) / fitSize.height,
-    };
-    return [topLeft, { width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y }] as [Point, Size];
+    return [topLeft, size, r] as [Point, Size, number];
 }
 
 export function getMidPoint(from: number, to: number, delta: number) {
@@ -204,19 +199,14 @@ export function adjustPosition(
     virtualPoint: Point,
     virtualTopLeft: Point,
     virtualSize: Size,
-    targetSize: Size,
-    targetPosition?: Point,
-    padding = 0
+    r: number,
+    screenSize: Size,
+    screenPosition?: Point,
+    paddingScreen = 0
 ) {
     return {
-        x:
-            ((virtualPoint.x - virtualTopLeft.x) / virtualSize.width) * targetSize.width +
-            (targetPosition?.x ?? 0) +
-            padding,
-        y:
-            ((virtualPoint.y - virtualTopLeft.y) / virtualSize.height) * targetSize.height +
-            (targetPosition?.y ?? 0) +
-            padding,
+        x: (virtualPoint.x - virtualTopLeft.x) * r + (screenPosition?.x ?? 0) + paddingScreen,
+        y: (virtualPoint.y - virtualTopLeft.y) * r + (screenPosition?.y ?? 0) + paddingScreen,
     };
 }
 
@@ -279,22 +269,27 @@ export const physicsMeta: PhysicsSettingsBag = {
     },
 };
 
-export function getOverlap(posSizes: PosSize[], screenPosition: Point, screenSize: Size): [boolean, boolean] {
+export function getOverlap(
+    posSizes: PosSize[],
+    overlapPaddingPixels: number,
+    screenPosition: Point,
+    screenSize: Size
+): [boolean, boolean] {
     let overlapping = false;
-    const overlapPadding = 1.1;
+    const overlapPadding = overlapPaddingPixels;
     let paddedOverlapping = false;
-    const shrinkPadding = 1.3;
+    const shrinkPadding = overlapPadding * 3;
     if (posSizes.length < 2) {
         if (posSizes.length === 1) {
             const posSize = { ...posSizes[0].screenPosition, ...posSizes[0].size };
             const [leftTop, bottomRight] = [
                 {
-                    x: posSize.x - posSize.width / 2,
-                    y: posSize.y - posSize.height / 2,
+                    x: posSize.x - posSize.width / 2 - overlapPadding,
+                    y: posSize.y - posSize.height / 2 - overlapPadding,
                 },
                 {
-                    x: posSize.x + posSize.width / 2,
-                    y: posSize.y + posSize.height / 2,
+                    x: posSize.x + posSize.width / 2 + overlapPadding,
+                    y: posSize.y + posSize.height / 2 + overlapPadding,
                 },
             ];
             if (leftTop.x < screenPosition.x || leftTop.y < screenPosition.y) {
@@ -307,7 +302,6 @@ export function getOverlap(posSizes: PosSize[], screenPosition: Point, screenSiz
                 return [true, true];
             }
         }
-        // console.log("Single Rect " + posSizes[0]?.name);
         return [false, true];
     }
     for (const posSize1 of posSizes) {
@@ -319,20 +313,20 @@ export function getOverlap(posSizes: PosSize[], screenPosition: Point, screenSiz
                 overlapping ||
                 rectanglesOverlap(
                     {
-                        x: rect1.x - (rect1.width / 2) * overlapPadding,
-                        y: rect1.y - (rect1.height / 2) * overlapPadding,
+                        x: rect1.x - rect1.width / 2 - overlapPadding,
+                        y: rect1.y - rect1.height / 2 - overlapPadding,
                     },
                     {
-                        x: rect1.x + (rect1.width / 2) * overlapPadding,
-                        y: rect1.y + (rect1.height / 2) * overlapPadding,
+                        x: rect1.x + rect1.width / 2 + overlapPadding,
+                        y: rect1.y + rect1.height / 2 + overlapPadding,
                     },
                     {
-                        x: rect2.x - (rect2.width / 2) * overlapPadding,
-                        y: rect2.y - (rect2.height / 2) * overlapPadding,
+                        x: rect2.x - rect2.width / 2 - overlapPadding,
+                        y: rect2.y - rect2.height / 2 - overlapPadding,
                     },
                     {
-                        x: rect2.x + (rect2.width / 2) * overlapPadding,
-                        y: rect2.y + (rect2.height / 2) * overlapPadding,
+                        x: rect2.x + rect2.width / 2 + overlapPadding,
+                        y: rect2.y + rect2.height / 2 + overlapPadding,
                     }
                 );
             // we test if there's any overlap with a padding around the rec
@@ -341,20 +335,20 @@ export function getOverlap(posSizes: PosSize[], screenPosition: Point, screenSiz
                 paddedOverlapping ||
                 rectanglesOverlap(
                     {
-                        x: rect1.x - (rect1.width / 2) * shrinkPadding,
-                        y: rect1.y - (rect1.height / 2) * shrinkPadding,
+                        x: rect1.x - rect1.width / 2 - shrinkPadding,
+                        y: rect1.y - rect1.height / 2 - shrinkPadding,
                     },
                     {
-                        x: rect1.x + (rect1.width / 2) * shrinkPadding,
-                        y: rect1.y + (rect1.height / 2) * shrinkPadding,
+                        x: rect1.x + rect1.width / 2 + shrinkPadding,
+                        y: rect1.y + rect1.height / 2 + shrinkPadding,
                     },
                     {
-                        x: rect2.x - (rect2.width / 2) * shrinkPadding,
-                        y: rect2.y - (rect2.height / 2) * shrinkPadding,
+                        x: rect2.x - rect2.width / 2 - shrinkPadding,
+                        y: rect2.y - rect2.height / 2 - shrinkPadding,
                     },
                     {
-                        x: rect2.x + (rect2.width / 2) * shrinkPadding,
-                        y: rect2.y + (rect2.height / 2) * shrinkPadding,
+                        x: rect2.x + rect2.width / 2 + shrinkPadding,
+                        y: rect2.y + rect2.height / 2 + shrinkPadding,
                     }
                 );
             // if any overlap, then we need to grow the target area. Quit.

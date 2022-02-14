@@ -27,7 +27,7 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
     );
     // Resize Demand - change the state
     const [graphSize, setGraphSize] = useState<Size|undefined>();
-    const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((name, overlapping, shrinking) => {
+    const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((_name, overlapping, shrinking) => {
         setGraphSize(
             (existingSize) =>
                 (existingSize && {
