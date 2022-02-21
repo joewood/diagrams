@@ -1,7 +1,6 @@
 import { Box, Center, ChakraProvider, Flex, Heading, theme } from "@chakra-ui/react";
-import { useGraphOptions, PhysicsSettings, GraphOptions } from "@diagrams/graph";
+import { GraphOptions, PhysicsSettings, useGraphOptions } from "@diagrams/graph";
 import { SideBar } from "@diagrams/sidebar";
-import { jsx } from "@emotion/react";
 import * as React from "react";
 import { ElementType, FC, useMemo } from "react";
 import ReactDOM from "react-dom";

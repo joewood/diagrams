@@ -1,7 +1,9 @@
 import { Ref, useLayoutEffect, useRef, useState } from "react";
-import { Point, Size, zeroPoint } from "./model";
+import { Point, Size, zeroPoint } from "./hooks/model";
 
-export function useDimensions<T extends HTMLElement = HTMLDivElement>(): [
+export function useDimensions<T extends HTMLElement = HTMLDivElement>(
+    trackResize = false
+): [
     Ref<T>,
     {
         position: Point;
@@ -20,6 +22,18 @@ export function useDimensions<T extends HTMLElement = HTMLDivElement>(): [
                 position: { x: size.left, y: size.top },
                 size: { width: size.width, height: size.height },
             });
-    }, []);
+        if (trackResize) {
+            const handler = () =>
+                window.requestAnimationFrame(() =>
+                    setDimensions((old) => ref.current?.getBoundingClientRect()?.toJSON() ?? old)
+                );
+            window.addEventListener("resize", handler);
+            window.addEventListener("scroll", handler);
+            return () => {
+                window.removeEventListener("resize", handler);
+                window.removeEventListener("scroll", handler);
+            };
+        }
+    }, [trackResize]);
     return [ref, { position, size }];
 }

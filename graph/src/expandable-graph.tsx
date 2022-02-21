@@ -2,12 +2,13 @@ import { mix } from "chroma-js";
 import { keyBy, mapValues } from "lodash";
 import * as React from "react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { Edges } from "./edges";
-import { MiniGraph, MiniGraphProps } from "./mini-graph";
-import { getVisibleNode, GraphOptions, Size, zeroPoint } from "./model";
-import { SvgContainer } from "./svg-container";
+import { Edges } from "./components/edges";
+import { MiniGraph, MiniGraphProps } from "./components/mini-graph";
+import { GraphOptions, Size, zeroPoint } from "./hooks/model";
+import { SvgContainer } from "./components/svg-container";
 import { useDimensions } from "./use-dimensions";
-import { useChanged, useChildrenNodesByParent, useDefaultOptions, useBubbledPositions } from "./use-ngraph";
+import { useBubbledPositions, useChildrenNodesByParent, useDefaultOptions } from "./hooks/use-ngraph";
+import { getVisibleNode } from "./hooks/dynamic-nodes";
 
 // type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode" |"";
 
@@ -30,7 +31,6 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         expanded,
         options: _options = {},
     }) => {
-
         const options = useDefaultOptions(_options);
 
         const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
@@ -40,16 +40,27 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         );
         // Resize Demand - change the state
         const [graphSize, setGraphSize] = useState<Size>();
-        const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((name, overlapping, shrinking) => {
-            setGraphSize(
-                (existingSize) =>
-                    (existingSize && {
-                        width: existingSize.width * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
-                        height: existingSize.height * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
-                    }) ||
-                    undefined
-            );
-        }, []);
+        const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>(
+            (name, { overlappingX, overlappingY, shrinkingX, shrinkingY, suggestedSize }) => {
+                // console.log("RESIZE GRAPH: " + JSON.stringify(graphSize), {
+                //     overlappingX,
+                //     overlappingY,
+                //     shrinkingX,
+                //     shrinkingY,
+                //     suggestedSize,
+                // });
+                setGraphSize(
+                    (existingSize) =>
+                        suggestedSize ??
+                        ((existingSize && {
+                            width: existingSize.width * (overlappingX ? 1.1 : shrinkingX ? 0.9 : 1),
+                            height: existingSize.height * (overlappingY ? 1.1 : shrinkingY ? 0.9 : 1),
+                        }) ||
+                            undefined)
+                );
+            },
+            []
+        );
         useEffect(() => {
             setGraphSize((oldGraphSize) => (!oldGraphSize ? defaultContainerSize : oldGraphSize));
         }, [defaultContainerSize]);

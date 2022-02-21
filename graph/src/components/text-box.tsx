@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import * as React from "react";
 import { FC, useCallback } from "react";
-import { Point, Size, transition } from "./model";
+import { Point, Size, transition } from "../hooks/model";
 import { Text } from "@visx/text";
 
 interface RectProps {

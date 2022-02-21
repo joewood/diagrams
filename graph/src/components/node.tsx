@@ -1,12 +1,11 @@
-import { mix } from "chroma-js";
 import { motion } from "framer-motion";
 import * as React from "react";
 import { FC, MouseEventHandler, useCallback, useMemo } from "react";
-import { SimpleNode } from ".";
+import { SimpleNode } from "..";
 import { MiniGraph, MiniGraphProps } from "./mini-graph";
-import { PositionedEdge, ScreenPositionedNode, Size, transition } from "./model";
-import { TextBox } from "./svg-react";
-import { useGraphResize } from "./use-ngraph";
+import { PositionedEdge, ScreenPositionedNode, Size, transition } from "../hooks/model";
+import { TextBox } from "./text-box";
+import { useGraphResize } from "../hooks/use-ngraph";
 
 export interface NodeProps
     extends Pick<
@@ -55,7 +54,7 @@ export const Node: FC<NodeProps> = ({
         [isExpanded, screenNode.name, onExpandToggleNode]
     );
     // request for expansion or shrink handled here, size is updated
-    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode, isExpanded);
+    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode);
     const screenTopLeft = useMemo(
         () => ({
             x: screenNode.screenPosition.x - screenNode.size.width / 2,

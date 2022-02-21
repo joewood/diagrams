@@ -2,56 +2,29 @@ import { groupBy, keyBy } from "lodash";
 import createLayout, { Layout, Vector } from "ngraph.forcelayout";
 import createGraph, { Link } from "ngraph.graph";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MiniGraphProps } from "./mini-graph";
+import { MiniGraphProps } from "../components/mini-graph";
+import { NodeProps } from "../components/node";
 import {
-    adjustPosition,
-    getContainingRect,
     GraphOptions,
     NGraph,
     NGraphLayout,
-    Point,
     PositionedEdge,
     PositionedNode,
+    ScreenRect,
     RequiredGraphOptions,
-    ScreenPositionedNode,
     SimpleEdge,
     SimpleNode,
     Size,
     zeroPoint,
 } from "./model";
-import { NodeProps } from "./node";
 
 export function useChanged<T>(name: string, x: T) {
     useEffect(() => console.log(`${name} changed.`), [x, name]);
 }
 
-export function useScreenNodes(
-    nodes: PositionedNode[],
-    parentVirtualPosition: Point,
-    r: number,
-    targetPosition: Point,
-    sizeOverrides: Record<string, Size>,
-    padding: number
-): [ScreenPositionedNode[], Record<string, ScreenPositionedNode>] {
-    return useMemo<ReturnType<typeof useScreenNodes>>(() => {
-        const screenNodes = nodes.map((node) => {
-            const screenPosition = adjustPosition(node.position, parentVirtualPosition, r, targetPosition, padding);
-            return {
-                ...node,
-                screenPosition,
-                parentScreenPosition: targetPosition,
-                size: sizeOverrides[node.name] ?? node.size,
-            };
-        });
-        return [screenNodes, keyBy(screenNodes, (n) => n.name)];
-    }, [nodes, padding, parentVirtualPosition, r, sizeOverrides, targetPosition]);
-}
-
-export type PosSize = { name: string; screenPosition: Point; size: Size };
-
-function updatePosSizes(previousPosSizes: Record<string, PosSize>, newPosSizes: PosSize[]) {
-    if (!newPosSizes || newPosSizes.length === 0) return previousPosSizes;
-    const nextPosSizes = { ...previousPosSizes };
+function updateBubblePositions(previousBubblePositions: Record<string, ScreenRect>, newPosSizes: ScreenRect[]) {
+    if (!newPosSizes || newPosSizes.length === 0) return previousBubblePositions;
+    const nextPosSizes = { ...previousBubblePositions };
     let anyDirty = false;
     for (const newPosSize of newPosSizes) {
         let dirty = false;
@@ -76,14 +49,14 @@ function updatePosSizes(previousPosSizes: Record<string, PosSize>, newPosSizes: 
         anyDirty ||= dirty;
     }
     if (anyDirty) return nextPosSizes;
-    return previousPosSizes;
+    return previousBubblePositions;
 }
 
-export function useBubbledPositions(): [Record<string, PosSize>, MiniGraphProps["onBubblePositions"]] {
-    const [trackPositions, setTrackPositions] = useState<Record<string, PosSize>>({});
+export function useBubbledPositions(): [Record<string, ScreenRect>, MiniGraphProps["onBubblePositions"]] {
+    const [trackPositions, setTrackPositions] = useState<Record<string, ScreenRect>>({});
     const onNodesPositioned = useCallback<MiniGraphProps["onBubblePositions"]>((posSizes) => {
         // console.log(`Nodes Local:${!!localMode} Positioned for ${name} : ${posSizes.length}`);
-        setTrackPositions((prev) => updatePosSizes(prev, posSizes));
+        setTrackPositions((prev) => updateBubblePositions(prev, posSizes));
     }, []);
     return [trackPositions, onNodesPositioned];
 }
@@ -95,38 +68,11 @@ export function useChildrenNodesByParent(simpleNodes: SimpleNode[]): Record<stri
     }, [simpleNodes]);
 }
 
-export function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2: Point, bottomRight2: Point) {
-    // To check if either rectangle is actually a line
-    // For example : l1 ={-1,0} r1={1,1} l2={0,-1} r2={0,1}
-    if (
-        topLeft1.x === bottomRight1.x ||
-        topLeft1.y === bottomRight1.y ||
-        topLeft2.x === bottomRight2.x ||
-        topLeft2.y === bottomRight2.y
-    ) {
-        // the line cannot have positive overlap
-        return false;
-    }
-    // If one rectangle is on left side of other
-    if (topLeft1.x >= bottomRight2.x || topLeft2.x >= bottomRight1.x) {
-        return false;
-    }
-    // If one rectangle is above other
-    if (bottomRight1.y <= topLeft2.y || bottomRight2.y <= topLeft1.y) {
-        return false;
-    }
-    return true;
-}
-
-function useLayout(
-    graph: NGraph,
-    sizeOverrides: Record<string, Size>,
-    options: RequiredGraphOptions
-): Layout<NGraph> & { overlapping: boolean } {
+function useLayout(graph: NGraph, sizeOverrides: Record<string, Size>, options: RequiredGraphOptions): Layout<NGraph> {
     return useMemo(() => {
         // Do the LAYOUT
         const layout = createLayout(graph, options);
-        const overlapping = false;
+        // const overlapping = false;
         layout.forEachBody(
             (body, id) =>
                 (body.mass =
@@ -144,7 +90,7 @@ function useLayout(
             });
             layout.step();
         }
-        return { ...layout, overlapping };
+        return layout;
     }, [graph, options, sizeOverrides]);
 }
 
@@ -157,14 +103,14 @@ function getNodesFromLayout(
     layout.forEachBody((body, key) => {
         const simpleNode = nodesDict[key];
         if (!simpleNode) {
-            console.log(`Found ${key} but not in dict ${nodesDict}`);
+            // console.log(`Found ${key} but not in dict ${nodesDict}`);
             return;
         }
         layoutNodes.push({
             ...simpleNode,
             body,
             size: simpleNode.size ?? options.defaultSize,
-            position: layout.getNodePosition(key),
+            virtualPos: layout.getNodePosition(key),
             backgroundColor: simpleNode.backgroundColor,
             parentVirtualPosition: zeroPoint,
         });
@@ -186,19 +132,6 @@ function getEdgesFromLayout(graph: NGraph, nodesDict: Record<string, PositionedN
         });
     });
     return layoutEdges;
-}
-
-export function useContainingRect(
-    targetArea: Size,
-    positionedNodes: PositionedNode[],
-    sizeOverride: Record<string, Size>,
-    textSize: number
-) {
-    // get the containing rectangle
-    return useMemo(
-        () => getContainingRect(positionedNodes, targetArea, sizeOverride, textSize),
-        [positionedNodes, targetArea, sizeOverride, textSize]
-    );
 }
 
 function useCreateGraph(nodes: SimpleNode[], edges: SimpleEdge[]) {
@@ -237,7 +170,7 @@ export function useDefaultOptions({
 }: GraphOptions) {
     return useMemo<RequiredGraphOptions>(
         () => ({
-            defaultSize: defaultSize ?? { width: 100, height: 80 },
+            defaultSize: defaultSize ?? { width: 100, height: 30 },
             iterations,
             debugMassNode,
             gravity,
@@ -274,7 +207,7 @@ export function useSimpleGraph(
     edges: SimpleEdge[],
     sizeOverrides: Record<string, Size>,
     options: Pick<Required<GraphOptions>, "defaultSize" | "iterations">
-): [PositionedNode[], PositionedEdge[], boolean] {
+): [PositionedNode[], PositionedEdge[]] {
     const { graph } = useCreateGraph(nodes, edges);
     const _options = useDefaultOptions(options);
     const layout = useLayout(graph, sizeOverrides, _options);
@@ -285,7 +218,7 @@ export function useSimpleGraph(
             graph,
             keyBy(positionedNodes, (node) => node.name)
         );
-        return [positionedNodes, positionedEdges, layout.overlapping];
+        return [positionedNodes, positionedEdges];
     }, [graph, layout, options, nodesDict]);
 }
 
@@ -293,19 +226,24 @@ export function useSimpleGraph(
 export function useGraphResize(
     name: string,
     existingSize: Size,
-    onResizeNode: NodeProps["onResizeNode"],
-    expanded: boolean | undefined
-): Required<MiniGraphProps>["onResizeNeeded"] {
-    useEffect(() => {
-        if (!expanded) onResizeNode(name, null);
-    }, [expanded, name, onResizeNode]);
-    return useCallback<Required<MiniGraphProps>["onResizeNeeded"]>(
-        (name: string, overlapping: boolean, shrinking: boolean) => {
-            // console.log(`Expanding: ${name} ${overlapping} ${shrinking} - ` + JSON.stringify(existingSize));
-            onResizeNode(name, {
-                width: existingSize.width * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
-                height: existingSize.height * (overlapping ? 1.1 : shrinking ? 0.9 : 1),
-            });
+    onResizeNode: NodeProps["onResizeNode"]
+    // expanded: boolean | undefined
+): MiniGraphProps["onResizeNeeded"] {
+    // useEffect(() => {
+    //     if (!expanded) onResizeNode(name, null);
+    // }, [expanded, name, onResizeNode]);
+    return useCallback<MiniGraphProps["onResizeNeeded"]>(
+        (name, { overlappingX, overlappingY, shrinkingX, shrinkingY, suggestedSize }) => {
+            const newSize = suggestedSize || {
+                width: existingSize.width * (overlappingX ? 1.1 : shrinkingX ? 0.9 : 1),
+                height: existingSize.height * (overlappingY ? 1.1 : shrinkingY ? 0.9 : 1),
+            };
+            console.log(
+                `Called - ${JSON.stringify(existingSize)} Suggested: ${JSON.stringify(
+                    suggestedSize
+                )} New: ${JSON.stringify(newSize)} Shrink:${shrinkingX||shrinkingY}`
+            );
+            onResizeNode(name, newSize);
         },
         [existingSize, onResizeNode]
     );

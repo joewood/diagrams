@@ -1,7 +1,8 @@
 import { motion, Point } from "framer-motion";
 import * as React from "react";
 import { memo, useMemo } from "react";
-import { getAnchors, RequiredGraphOptions, SimpleEdge, Size, transition } from "./model";
+import { getAnchors } from "../hooks/calc-best-anchors";
+import { RequiredGraphOptions, SimpleEdge, Size, transition } from "../hooks/model";
 
 interface Props {
     positionDict: Record<string, { screenPosition: Point; size: Size }>;
