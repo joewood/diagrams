@@ -54,7 +54,7 @@ export const Node: FC<NodeProps> = ({
         [isExpanded, screenNode.name, onExpandToggleNode]
     );
     // request for expansion or shrink handled here, size is updated
-    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode);
+    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode,isExpanded);
     const screenTopLeft = useMemo(
         () => ({
             x: screenNode.screenPosition.x - screenNode.size.width / 2,

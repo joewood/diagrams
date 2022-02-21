@@ -42,11 +42,11 @@ function calculateScreenScale(
     nodes: PositionedNode[],
     screenSize: Size,
     sizeOverride: Record<string, Size>,
-    padding = 0
+    containerPadding: number
 ): [Point, number, number] {
     const getSize = (node: PositionedNode) => sizeOverride[node.name] ?? node.size;
-    const halfWidth = (node: PositionedNode) => getSize(node).width / 2 + padding;
-    const halfHeight = (node: PositionedNode) => getSize(node).height / 2 + padding;
+    const halfWidth = (node: PositionedNode) => getSize(node).width / 2 + containerPadding;
+    const halfHeight = (node: PositionedNode) => getSize(node).height / 2 + containerPadding;
 
     /** Fitness of how well our ratio fits the graph in the space.
      * @returns How much it overlaps the bounds. We want this to be <0.    */
@@ -70,8 +70,8 @@ function calculateScreenScale(
     const distanceY = Math.max(...nodes.map((n) => n.virtualPos.y)) - Math.min(...nodes.map((n) => n.virtualPos.y));
 
     // don't both if any of the nodes are bigger than the screenSize
-    const maxWidth = Math.max(...nodes.map((n) => n.size.width + 2 * padding));
-    const maxHeight = Math.max(...nodes.map((n) => n.size.height + 2 * padding));
+    const maxWidth = Math.max(...nodes.map((n) => n.size.width + 2 * containerPadding));
+    const maxHeight = Math.max(...nodes.map((n) => n.size.height + 2 * containerPadding));
 
     let scaleX = screenSize.width / Math.max(distanceX, nodes[0].size.width);
     let scaleY = screenSize.height / Math.max(distanceY, nodes[0].size.height);

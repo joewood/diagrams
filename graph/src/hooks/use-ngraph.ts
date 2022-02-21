@@ -226,12 +226,12 @@ export function useSimpleGraph(
 export function useGraphResize(
     name: string,
     existingSize: Size,
-    onResizeNode: NodeProps["onResizeNode"]
-    // expanded: boolean | undefined
+    onResizeNode: NodeProps["onResizeNode"],
+    isExpanded: boolean | undefined
 ): MiniGraphProps["onResizeNeeded"] {
-    // useEffect(() => {
-    //     if (!expanded) onResizeNode(name, null);
-    // }, [expanded, name, onResizeNode]);
+    useEffect(() => {
+        if (!isExpanded) onResizeNode(name, null);
+    }, [isExpanded, name, onResizeNode]);
     return useCallback<MiniGraphProps["onResizeNeeded"]>(
         (name, { overlappingX, overlappingY, shrinkingX, shrinkingY, suggestedSize }) => {
             const newSize = suggestedSize || {
@@ -241,7 +241,7 @@ export function useGraphResize(
             console.log(
                 `Called - ${JSON.stringify(existingSize)} Suggested: ${JSON.stringify(
                     suggestedSize
-                )} New: ${JSON.stringify(newSize)} Shrink:${shrinkingX||shrinkingY}`
+                )} New: ${JSON.stringify(newSize)} Shrink:${shrinkingX || shrinkingY}`
             );
             onResizeNode(name, newSize);
         },
