@@ -85,7 +85,7 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
                             as={Flex}
                             fontSize={14}
                             sx={{
-                                "& > *:first-child": {
+                                "& > svg:first-of-type": {
                                     marginLeft: 2,
                                     flex: "0 0 auto",
                                     color: options.color,
