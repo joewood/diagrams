@@ -4,46 +4,46 @@ import { FC, useCallback } from "react";
 import { Point, Size, transition } from "../hooks/model";
 import { Text } from "@visx/text";
 
-interface RectProps {
+interface Props {
     name: string;
-    initialSize: Size | undefined;
+    initialSize: Size;
     size: Size;
-    initialPosition: Point | undefined;
-    position: Point;
+    initialCenterPos: Point;
+    centerPos: Point;
     fillColor?: string;
     borderColor?: string;
-    borderThickness?:number;
+    borderThickness?: number;
     textColor?: string;
     textSize?: number | string;
     text?: string;
     verticalAnchor?: "start" | "end" | "middle";
+    textAnchor?: "start" | "middle" | "end" | "inherit";
     filter?: string;
     onSelectNode?: (args: { name: string }) => void;
 }
 
-export const TextBox: FC<RectProps> = ({
+export const TextBox: FC<Props> = ({
     name,
-    initialPosition,
+    initialCenterPos,
     initialSize,
-    position,
+    centerPos,
     size,
     fillColor = "transparent",
-    borderColor = "white",
+    borderColor,
     textColor = "black",
-    borderThickness = 2,
+    borderThickness,
+    textAnchor = "middle",
     verticalAnchor = "middle",
     textSize,
     text,
     filter,
     onSelectNode,
-    children
+    children,
 }) => {
     const onClick = useCallback(() => {
         if (onSelectNode) onSelectNode({ name });
     }, [onSelectNode, name]);
     const textSizeDefaulted = textSize ?? size.height / 4;
-    const initialSizeDefaulted = initialSize ?? size;
-    const initialPositionDefaulted = initialPosition ?? position;
     return (
         <>
             <motion.g
@@ -51,17 +51,17 @@ export const TextBox: FC<RectProps> = ({
                 layoutId={name}
                 initial={{
                     opacity: 0,
-                    width: initialSizeDefaulted.width,
-                    height: initialSizeDefaulted.height,
-                    x: initialPositionDefaulted.x - initialSizeDefaulted.width / 2,
-                    y: initialPositionDefaulted.y - initialSizeDefaulted.height / 2,
+                    // width: initialSizeDefaulted.width,
+                    // height: initialSizeDefaulted.height,
+                    x: initialCenterPos.x, //- initialSize.width / 2,
+                    y: initialCenterPos.y, //- initialSize.height / 2,
                     fill: fillColor,
                     stroke: borderColor,
                 }}
                 animate={{
                     opacity: 1,
-                    x: position.x - size.width / 2,
-                    y: position.y - size.height / 2,
+                    x: centerPos.x, //- size.width / 2,
+                    y: centerPos.y, //- size.height / 2,
                     fill: fillColor,
                     stroke: borderColor,
                 }}
@@ -71,24 +71,26 @@ export const TextBox: FC<RectProps> = ({
                     layoutId={name + "-rect"}
                     initial={{
                         opacity: 0,
-                        width: initialSizeDefaulted.width,
-                        height: initialSizeDefaulted.height,
+                        width: initialSize.width,
+                        height: initialSize.height,
+                        x: (-1 * initialSize.width) / 2,
+                        y: (-1 * initialSize.height) / 2,
                         fill: fillColor,
                         stroke: borderColor,
-                        rx: initialSizeDefaulted.width / 20,
-                        ry: initialSizeDefaulted.height / 20,
+                        rx: initialSize.width / 20,
+                        ry: initialSize.height / 20,
                     }}
                     animate={{
                         opacity: 1,
                         width: size.width,
                         height: size.height,
+                        x: (-1 * size.width) / 2,
+                        y: (-1 * size.height) / 2,
                         fill: fillColor,
                         stroke: borderColor,
                         rx: size.width / 20,
                         ry: size.height / 20,
                     }}
-                    x={0}
-                    y={0}
                     transition={transition}
                     fill={fillColor}
                     filter={filter}
@@ -98,12 +100,12 @@ export const TextBox: FC<RectProps> = ({
                 />
                 <Text
                     style={{ fill: textColor, strokeWidth: 0, userSelect: "none" }}
-                    textAnchor="start"
-                    verticalAnchor="start"
-                    x={size.width / 20}
-                    y={size.height / 20}
-                    width={size.width - (size.width * 4) / 20}
-                    height={size.height - (size.height * 4) / 20}
+                    textAnchor={textAnchor}
+                    verticalAnchor={verticalAnchor}
+                    x={0}
+                    y={0}
+                    width={size.width}
+                    height={size.height}
                     fontSize={textSizeDefaulted}
                     fontWeight="bold"
                     onClick={onClick}

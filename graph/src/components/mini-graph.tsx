@@ -29,7 +29,7 @@ export interface MiniGraphProps {
     onResizeNeeded: (name: string, action: ResizeNeededAction) => void;
     onBubblePositions: (nodes: ScreenRect[]) => void;
     onGetSubgraph?: (name: string) => SimpleNode[];
-    options: Pick<RequiredGraphOptions, "defaultSize" | "textSize" | "iterations">;
+    options: Pick<RequiredGraphOptions, "defaultSize" | "textSize" | "iterations" | "titleHeight" | "nodeMargin">;
 }
 
 /** This Component renders Simple Nodes by positioning them in a graph.
@@ -58,14 +58,15 @@ export const MiniGraph = memo<MiniGraphProps>(
         const [positionedNodes] = useSimpleGraph(simpleNodes, simpleEdges, localSizeOverrides, options);
         // Resize Demand - change the state
 
-        const padding = options.textSize;
+        const containerPadding = options.textSize;
         // adjust the position of the nodes to fit within the targetArea
         // get the containing rectangle of the graph and project it onto screen size and pos
         const [virtualTopLeft, scaleX, scaleY] = useScreenScale(
             screenSize,
             positionedNodes,
             localSizeOverrides,
-            padding
+            containerPadding,
+            options.titleHeight
         );
         const screenNodes = useScreenNodes(
             positionedNodes,
@@ -74,7 +75,8 @@ export const MiniGraph = memo<MiniGraphProps>(
             scaleY,
             screenPosition,
             localSizeOverrides,
-            padding
+            containerPadding,
+            options.titleHeight
         );
         // use the screenNodes as the initial positions managing the state of the nodes
         // this is updated using the onNodesPositioned
@@ -97,7 +99,16 @@ export const MiniGraph = memo<MiniGraphProps>(
             });
         }, []);
         useEffect(() => onBubblePositions?.(screenNodes), [onBubblePositions, screenNodes]);
-        useOverlap(name, onResizeNeeded, options.textSize, screenNodes, screenPosition, screenSize);
+        useOverlap(
+            name,
+            onResizeNeeded,
+            options.nodeMargin,
+            options.textSize,
+            options.titleHeight,
+            screenNodes,
+            screenPosition,
+            screenSize
+        );
         // notify parent graph that a node has been changed
         return (
             <>

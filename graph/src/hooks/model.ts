@@ -77,6 +77,8 @@ export interface GraphOptions extends Partial<PhysicsSettings> {
     debugMassNode?: boolean;
     defaultSize?: Size;
     textSize?: number;
+    nodeMargin?: number;
+    titleHeight?: number;
     iterations?: number;
 }
 

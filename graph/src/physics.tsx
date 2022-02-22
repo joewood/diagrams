@@ -14,7 +14,15 @@ import * as React from "react";
 import { FC, useCallback, useState } from "react";
 import { GraphOptions, RequiredGraphOptions } from "./hooks/model";
 
-export type NumericOpts = "gravity" | "springCoefficient" | "springLength" | "dragCoefficient" | "theta" | "textSize";
+export type NumericOpts =
+    | "gravity"
+    | "springCoefficient"
+    | "springLength"
+    | "dragCoefficient"
+    | "theta"
+    | "textSize"
+    | "nodeMargin"
+    | "titleHeight";
 export type PhysicsSettingsBag = {
     [Property in keyof Pick<RequiredGraphOptions, NumericOpts>]: {
         name: string;
@@ -84,6 +92,20 @@ const physicsMeta: PhysicsSettingsBag = {
         minVal: 1,
         maxVal: 20,
         default: 10,
+    },
+    nodeMargin: {
+        name: "Node Margin",
+        description: "Margin around nodes checking for collisions",
+        minVal: 1,
+        maxVal: 40,
+        default: 10,
+    },
+    titleHeight: {
+        name: "Title Bar Height",
+        description: "Area at top of subgraph reserved for title",
+        minVal: 1,
+        maxVal: 100,
+        default: 30,
     },
 };
 

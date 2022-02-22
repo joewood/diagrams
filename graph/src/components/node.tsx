@@ -54,7 +54,7 @@ export const Node: FC<NodeProps> = ({
         [isExpanded, screenNode.name, onExpandToggleNode]
     );
     // request for expansion or shrink handled here, size is updated
-    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode,isExpanded);
+    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode, isExpanded);
     const screenTopLeft = useMemo(
         () => ({
             x: screenNode.screenPosition.x - screenNode.size.width / 2,
@@ -62,46 +62,91 @@ export const Node: FC<NodeProps> = ({
         }),
         [screenNode.screenPosition.x, screenNode.screenPosition.y, screenNode.size]
     );
+    const isSubgraph = onGetSubgraph && subNodes && subNodes.length > 0;
+    const isExpandedSubgraph = isSubgraph && isExpanded;
+    const labelSize = useMemo(
+        () => ({
+            ...screenNode.size,
+            height: isExpandedSubgraph ? options.titleHeight * 0.9 : screenNode.size.height,
+        }),
+        [isExpandedSubgraph, options.titleHeight, screenNode.size]
+    );
+    const labelPosition = useMemo(
+        () => ({
+            ...screenNode.screenPosition,
+            y: isExpandedSubgraph
+                ? screenNode.screenPosition.y - screenNode.size.height / 2 + labelSize.height / 2
+                : screenNode.screenPosition.y,
+        }),
+        [isExpandedSubgraph, labelSize.height, screenNode.screenPosition, screenNode.size.height]
+    );
     return (
         <>
+            <motion.rect
+                key={screenNode.name + "-border"}
+                layoutId={screenNode.name + "-border"}
+                initial={{
+                    x:
+                        (screenNode.initialScreenPosition ?? screenNode.screenPosition).x -
+                        (screenNode.initialSize ?? screenNode.size).width / 2,
+                    y:
+                        (screenNode.initialScreenPosition ?? screenNode.screenPosition).y -
+                        (screenNode.initialSize ?? screenNode.size).height / 2,
+                    width: (screenNode.initialSize ?? screenNode.size).width,
+                    height: (screenNode.initialSize ?? screenNode.size).height,
+                }}
+                animate={{
+                    x: screenNode.screenPosition.x - screenNode.size.width / 2,
+                    y: screenNode.screenPosition.y - screenNode.size.height / 2,
+                    width: screenNode.size.width,
+                    height: screenNode.size.height,
+                }}
+                stroke={borderColor}
+                transition={transition}
+                strokeWidth={selectedNode === screenNode.name ? 2 : 1}
+                fill={backgroundColor}
+                filter={screenNode.shadow ? "url(#shadow)" : undefined}
+            />
+
             <TextBox
                 key={screenNode.name}
-                initialPosition={screenNode.initialScreenPosition ?? screenNode.screenPosition}
-                initialSize={screenNode.initialSize ?? screenNode.size}
-                position={screenNode.screenPosition}
-                size={screenNode.size}
+                initialCenterPos={screenNode.initialScreenPosition ?? screenNode.screenPosition}
+                initialSize={screenNode.initialSize ?? labelSize}
+                centerPos={labelPosition}
+                size={labelSize}
                 name={screenNode.name}
                 text={screenNode.name}
-                fillColor={backgroundColor}
-                borderColor={borderColor}
-                borderThickness={selectedNode === screenNode.name ? 2 : 1}
-                verticalAnchor="start"
+                fillColor={isExpandedSubgraph ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0)"}
+                verticalAnchor="middle"
+                textAnchor="middle"
                 onSelectNode={onSelectNode}
                 textSize={options.textSize}
                 textColor="#202020"
-                filter={screenNode.shadow ? "url(#shadow)" : undefined}
             >
-                {onGetSubgraph && subNodes && subNodes.length > 0 && (
+                {isSubgraph && (
                     <motion.text
+                        layoutId={screenNode.name + "-expand-button"}
                         fontSize={options.textSize * 2}
                         initial={{
-                            x: (screenNode.initialSize ?? screenNode.size).width - options.textSize * 2,
-                            y: options.textSize * 2,
+                            x: (screenNode.initialSize ?? labelSize).width / 2 - options.textSize,
+                            y: 0,
                         }}
+                        animate={{
+                            x: labelSize.width / 2 - options.textSize,
+                            y: 0,
+                        }}
+                        textAnchor="middle"
                         transition={transition}
                         style={{ userSelect: "none" }}
                         cursor="pointer"
+                        fill="black"
                         onClick={onClick}
-                        animate={{
-                            x: screenNode.size.width - options.textSize * 2,
-                            y: options.textSize * 2,
-                        }}
                     >
                         {isExpanded ? "-" : "+"}
                     </motion.text>
                 )}
             </TextBox>
-            {isExpanded && subNodes && subNodes.length > 0 && (
+            {isExpandedSubgraph && (
                 <MiniGraph
                     key={screenNode.name + "-graph"}
                     simpleNodes={subNodes}

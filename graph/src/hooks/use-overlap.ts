@@ -6,14 +6,19 @@ export function useOverlap(
     name: string,
     onResizeNeeded: MiniGraphProps["onResizeNeeded"],
     rectangleMargin: number,
+    containerPadding: number,
+    titlePadding: number,
     rectangles: ScreenRect[],
     screenPosition: Point,
     screenSize: Size
 ) {
     // notify parent graph that a node has been changed
     useEffect(() => {
-        const maxWidth = Math.max(screenSize.width, ...rectangles.map((p) => p.size.width + 2 * rectangleMargin));
-        const maxHeight = Math.max(screenSize.height, ...rectangles.map((p) => p.size.height + 2 * rectangleMargin));
+        const maxWidth = Math.max(screenSize.width, ...rectangles.map((p) => p.size.width + 2 * containerPadding));
+        const maxHeight = Math.max(
+            screenSize.height,
+            ...rectangles.map((p) => p.size.height + containerPadding + titlePadding)
+        );
 
         if (maxWidth > screenSize.width || maxHeight > screenSize.height) {
             console.log("Suggested new Size " + JSON.stringify(screenSize), maxWidth, maxHeight);
@@ -46,7 +51,7 @@ export function useOverlap(
             );
             return () => clearTimeout(t);
         }
-    }, [name, onResizeNeeded, rectangleMargin, rectangles, screenPosition, screenSize]);
+    }, [containerPadding, name, onResizeNeeded, rectangleMargin, rectangles, screenPosition, screenSize, titlePadding]);
 }
 
 function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2: Point, bottomRight2: Point) {

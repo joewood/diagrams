@@ -166,6 +166,8 @@ export function useDefaultOptions({
     dimensions = 2,
     timeStep = 0.5,
     debug = false,
+    titleHeight = 30,
+    nodeMargin = 10,
     adaptiveTimeStepWeight = 0,
 }: GraphOptions) {
     return useMemo<RequiredGraphOptions>(
@@ -180,6 +182,8 @@ export function useDefaultOptions({
             dragCoefficient,
             dimensions,
             timeStep,
+            nodeMargin,
+            titleHeight,
             adaptiveTimeStepWeight,
             debug,
             textSize: textSize ?? (defaultSize?.width ?? 100) / 12,
@@ -193,11 +197,13 @@ export function useDefaultOptions({
             dragCoefficient,
             gravity,
             iterations,
+            nodeMargin,
             springCoefficient,
             springLength,
             textSize,
             theta,
             timeStep,
+            titleHeight,
         ]
     );
 }
