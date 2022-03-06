@@ -1,5 +1,36 @@
 import { useMemo } from "react";
-import { PositionedNode, Size, Point, ScreenPositionedNode } from "./model";
+import { PositionedNode, Size, Point, ScreenPositionedNode, RequiredGraphOptions } from "./model";
+
+export function useScreenNodesScaleMethod(
+    screenPosition: Point,
+    screenSize: Size,
+    positionedNodes: PositionedNode[],
+    localSizeOverrides: Record<string, Size>,
+    containerPadding: number,
+    titlePadding: number,
+){
+           // adjust the position of the nodes to fit within the targetArea
+        // get the containing rectangle of the graph and project it onto screen size and pos
+        const [virtualTopLeft, scaleX, scaleY] = useScreenScale(
+            screenSize,
+            positionedNodes,
+            localSizeOverrides,
+            containerPadding,
+            titlePadding
+        );
+        return useScreenNodesByScale(
+            positionedNodes,
+            virtualTopLeft,
+            scaleX,
+            scaleY,
+            screenPosition,
+            localSizeOverrides,
+            containerPadding,
+            titlePadding
+        );
+ 
+}
+
 
 export function useScreenScale(
     screenSize: Size,
@@ -14,7 +45,7 @@ export function useScreenScale(
     }, [positionedNodes, screenSize, sizeOverride, containerPadding, titlePadding]);
 }
 
-export function useScreenNodes(
+export function useScreenNodesByScale(
     nodes: PositionedNode[],
     parentVirtualPosition: Point,
     scaleX: number,
@@ -24,7 +55,7 @@ export function useScreenNodes(
     containerPadding: number,
     titlePadding: number
 ): ScreenPositionedNode[] {
-    return useMemo<ReturnType<typeof useScreenNodes>>(() => {
+    return useMemo<ReturnType<typeof useScreenNodesByScale>>(() => {
         const screenNodes = nodes.map((node) => {
             const screenPosition = adjustPosition(
                 node.virtualPos,
@@ -61,14 +92,14 @@ function calculateScreenScale(
 
     /** Fitness of how well our ratio fits the graph in the space.
      * @returns How much it overlaps the bounds. We want this to be <0.    */
-    function fitnessTest(nodes: PositionedNode[], screenArea: Size, rx: number, ry: number): [number, number] {
+    function fitnessTest(nodes: PositionedNode[], screenArea: Size, scaleX: number, scaleY: number): [number, number] {
         const testScreenWidth =
-            Math.max(...nodes.map((n) => n.virtualPos.x * rx + halfWidth(n))) -
-            Math.min(...nodes.map((n) => n.virtualPos.x * rx - halfWidth(n))) +
+            Math.max(...nodes.map((n) => n.virtualPos.x * scaleX + halfWidth(n))) -
+            Math.min(...nodes.map((n) => n.virtualPos.x * scaleX - halfWidth(n))) +
             2 * containerPadding;
         const testScreenHeight =
-            Math.max(...nodes.map((n) => n.virtualPos.y * ry + halfHeight(n))) -
-            Math.min(...nodes.map((n) => n.virtualPos.y * ry - halfHeight(n))) +
+            Math.max(...nodes.map((n) => n.virtualPos.y * scaleY + halfHeight(n))) -
+            Math.min(...nodes.map((n) => n.virtualPos.y * scaleY - halfHeight(n))) +
             titlePadding +
             containerPadding;
         return [testScreenWidth / screenArea.width, testScreenHeight / screenArea.height];
@@ -86,11 +117,12 @@ function calculateScreenScale(
     // don't both if any of the nodes are bigger than the screenSize
     // const maxWidth = Math.max(...nodes.map((n) => n.size.width + 2 * containerPadding));
     // const maxHeight = Math.max(...nodes.map((n) => n.size.height + 2 * containerPadding));
-
+    // the highest scaleX is screen size/smallest possible size of graph.
     let scaleX = screenSize.width / Math.max(distanceX, nodes[0].size.width);
     let scaleY = screenSize.height / Math.max(distanceY, nodes[0].size.height);
     // if (maxWidth >= screenSize.width) scaleX = 0;
     // if (maxHeight >= screenSize.height) scaleY = 0;
+    // now we shrink until it fits into the screen size.
     let index = 0;
     const maxAttempts = 400;
     do {

@@ -239,16 +239,19 @@ export function useGraphResize(
         if (!isExpanded) onResizeNode(name, null);
     }, [isExpanded, name, onResizeNode]);
     return useCallback<MiniGraphProps["onResizeNeeded"]>(
-        (name, { overlappingX, overlappingY, shrinkingX, shrinkingY, suggestedSize }) => {
-            const newSize = suggestedSize || {
-                width: existingSize.width * (overlappingX ? 1.1 : shrinkingX ? 0.9 : 1),
-                height: existingSize.height * (overlappingY ? 1.1 : shrinkingY ? 0.9 : 1),
-            };
-            console.log(
-                `Called - ${JSON.stringify(existingSize)} Suggested: ${JSON.stringify(
-                    suggestedSize
-                )} New: ${JSON.stringify(newSize)} Shrink:${shrinkingX || shrinkingY}`
-            );
+        (name, {
+            //  overlappingX, overlappingY, shrinkingX, shrinkingY, 
+            suggestedSize }) => {
+            const newSize = suggestedSize
+            //  ?? {
+            //     width: existingSize.width * (overlappingX ? 1.1 : shrinkingX ? 0.9 : 1),
+            //     height: existingSize.height * (overlappingY ? 1.1 : shrinkingY ? 0.9 : 1),
+            // };
+            // console.log(
+            //     `Called - ${JSON.stringify(existingSize)} Suggested: ${JSON.stringify(
+            //         suggestedSize
+            //     )} New: ${JSON.stringify(newSize)} Shrink:${shrinkingX || shrinkingY}`
+            // );
             onResizeNode(name, newSize);
         },
         [existingSize, onResizeNode]

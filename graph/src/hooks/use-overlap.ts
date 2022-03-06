@@ -1,30 +1,33 @@
 import { useEffect } from "react";
-import { MiniGraphProps } from "..";
+import { MiniGraphProps, RequiredGraphOptions } from "..";
 import { Point, ScreenRect, Size } from "./model";
 
-export function useOverlap(
+/** Check for overlap between the set of rectangles, or if the rectangles exceed the screen size */
+export function useOverlapCheck(
     name: string,
     onResizeNeeded: MiniGraphProps["onResizeNeeded"],
-    rectangleMargin: number,
-    containerPadding: number,
-    titlePadding: number,
+    options: Pick<RequiredGraphOptions, "nodeMargin" | "textSize" | "titleHeight">,
     rectangles: ScreenRect[],
     screenPosition: Point,
     screenSize: Size
 ) {
+    const { nodeMargin: rectangleMargin, titleHeight: titlePadding, textSize: containerPadding } = options;
     // notify parent graph that a node has been changed
     useEffect(() => {
         const maxWidth = Math.max(screenSize.width, ...rectangles.map((p) => p.size.width + 2 * containerPadding));
         const maxHeight = Math.max(
             screenSize.height,
-            ...rectangles.map((p) => p.size.height + containerPadding + titlePadding)
+            ...rectangles.map((p) => p.size.height + containerPadding * 2 + titlePadding)
         );
-
         if (maxWidth > screenSize.width || maxHeight > screenSize.height) {
-            console.log("Suggested new Size " + JSON.stringify(screenSize), maxWidth, maxHeight);
+            console.log(
+                `Suggested new Size to fit largest child screen:${JSON.stringify(
+                    screenSize
+                )} child:${maxWidth},${maxHeight}`
+            );
             onResizeNeeded(name, {
-                overlappingX: true,
-                overlappingY: true,
+                // overlappingX: true,
+                // overlappingY: true,
                 suggestedSize: {
                     width: maxWidth,
                     height: maxHeight,
@@ -35,17 +38,16 @@ export function useOverlap(
         const [overlappingX, overlappingY, paddedOverlappingX, paddedOverlappingY] = getOverlap(
             rectangles,
             rectangleMargin
-            // screenPosition,
-            // screenSize
         );
         if (overlappingX || overlappingY || !paddedOverlappingX || !paddedOverlappingY) {
             const t = setTimeout(
                 () =>
                     onResizeNeeded(name, {
-                        overlappingX,
-                        overlappingY,
-                        shrinkingX: !paddedOverlappingX,
-                        shrinkingY: !paddedOverlappingY,
+                        suggestedSize: screenSize,
+                        // overlappingX,
+                        // overlappingY,
+                        // shrinkingX: !paddedOverlappingX,
+                        // shrinkingY: !paddedOverlappingY,
                     }),
                 1
             );
@@ -54,7 +56,33 @@ export function useOverlap(
     }, [containerPadding, name, onResizeNeeded, rectangleMargin, rectangles, screenPosition, screenSize, titlePadding]);
 }
 
-function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2: Point, bottomRight2: Point) {
+export function rectanglesOverlapSize(
+    rect1: Point,
+    rect1Size: Size,
+    rect2: Point,
+    rect2Size: Size,
+    containerPadding: number
+) {
+    const topLeft1 = {
+        x: rect1.x - rect1Size.width / 2 - containerPadding,
+        y: rect1.y - rect1Size.height / 2 - containerPadding,
+    };
+    const bottomRight1 = {
+        x: rect1.x + rect1Size.width / 2 + containerPadding,
+        y: rect1.y + rect1Size.height / 2 + containerPadding,
+    };
+    const topLeft2 = {
+        x: rect2.x - rect2Size.width / 2 - containerPadding,
+        y: rect2.y - rect2Size.height / 2 - containerPadding,
+    };
+    const bottomRight2 = {
+        x: rect2.x + rect2Size.width / 2 + containerPadding,
+        y: rect2.y + rect2Size.height / 2 + containerPadding,
+    };
+    return rectanglesOverlap(topLeft1, bottomRight1, topLeft2, bottomRight2);
+}
+
+export function rectanglesOverlap(topLeft1: Point, bottomRight1: Point, topLeft2: Point, bottomRight2: Point) {
     // To check if either rectangle is actually a line
     // For example : l1 ={-1,0} r1={1,1} l2={0,-1} r2={0,1}
     let [overlapX, overlapY] = [false, false];
@@ -105,49 +133,25 @@ export function getOverlap(
     // overlap logic only applies if there are >=2 rectangles
     if (rectangles.length < 2) return [false, false, true, true];
     for (const rectangle1 of rectangles) {
-        const rect1 = { ...rectangle1.screenPosition, ...rectangle1.size };
         for (const rectangle2 of rectangles) {
             if (rectangle2 === rectangle1) continue;
-            const rect2 = { ...rectangle2.screenPosition, ...rectangle2.size };
-            const [newOverlapX, newOverlapY] = rectanglesOverlap(
-                {
-                    x: rect1.x - rect1.width / 2 - rectangleMargin,
-                    y: rect1.y - rect1.height / 2 - rectangleMargin,
-                },
-                {
-                    x: rect1.x + rect1.width / 2 + rectangleMargin,
-                    y: rect1.y + rect1.height / 2 + rectangleMargin,
-                },
-                {
-                    x: rect2.x - rect2.width / 2 - rectangleMargin,
-                    y: rect2.y - rect2.height / 2 - rectangleMargin,
-                },
-                {
-                    x: rect2.x + rect2.width / 2 + rectangleMargin,
-                    y: rect2.y + rect2.height / 2 + rectangleMargin,
-                }
+            const [newOverlapX, newOverlapY] = rectanglesOverlapSize(
+                rectangle1.screenPosition,
+                rectangle1.size,
+                rectangle2.screenPosition,
+                rectangle2.size,
+                rectangleMargin
             );
             overlapInMarginX ||= newOverlapX;
             overlapInMarginY ||= newOverlapY;
             // we test if there's any overlap with a padding around the rec
             // if there's no overlap then we can probably shrink the targetArea
-            const [newPaddedOverlapX, newPaddedOverlapY] = rectanglesOverlap(
-                {
-                    x: rect1.x - rect1.width / 2 - veryWideMargin,
-                    y: rect1.y - rect1.height / 2 - veryWideMargin,
-                },
-                {
-                    x: rect1.x + rect1.width / 2 + veryWideMargin,
-                    y: rect1.y + rect1.height / 2 + veryWideMargin,
-                },
-                {
-                    x: rect2.x - rect2.width / 2 - veryWideMargin,
-                    y: rect2.y - rect2.height / 2 - veryWideMargin,
-                },
-                {
-                    x: rect2.x + rect2.width / 2 + veryWideMargin,
-                    y: rect2.y + rect2.height / 2 + veryWideMargin,
-                }
+            const [newPaddedOverlapX, newPaddedOverlapY] = rectanglesOverlapSize(
+                rectangle1.screenPosition,
+                rectangle1.size,
+                rectangle2.screenPosition,
+                rectangle2.size,
+                veryWideMargin
             );
             overlapWideMarginX ||= newPaddedOverlapX;
             overlapWideMarginY ||= newPaddedOverlapY;

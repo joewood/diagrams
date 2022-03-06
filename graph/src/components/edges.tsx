@@ -29,12 +29,13 @@ export const Edges = memo<Props>(({ edges, positionDict, options }) => {
                         nodeTo.screenPosition,
                         nodeTo.size ?? options.defaultSize,
                         nodeFrom.screenPosition,
-                        nodeFrom.size ?? options.defaultSize
+                        nodeFrom.size ?? options.defaultSize,
+                        options.textSize * 2
                     );
                     return { ...e, points: [fromPoint, midPoint1, midPoint2, toPoint] };
                 })
                 .filter((e) => e !== null),
-        [edges, options.defaultSize, positionDict]
+        [edges, options.defaultSize, options.textSize, positionDict]
     );
 
     return (

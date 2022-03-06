@@ -8,11 +8,10 @@ import {
     ScreenRect,
     SimpleEdge,
     SimpleNode,
-    Size,
+    Size
 } from "../hooks/model";
 import { useSimpleGraph } from "../hooks/use-ngraph";
-import { useOverlap } from "../hooks/use-overlap";
-import { useScreenNodes, useScreenScale } from "../hooks/use-screen-scale";
+import { useScreenNodesVectorMethod } from "../hooks/use-screen-vector";
 import { Node, NodeProps } from "./node";
 
 export interface MiniGraphProps {
@@ -53,6 +52,7 @@ export const MiniGraph = memo<MiniGraphProps>(
         onBubblePositions,
         options,
     }) => {
+        // console.log("Size " + JSON.stringify(screenSize));
         const [localSizeOverrides, setLocalSizeOverrides] = useState<Record<string, Size>>({});
         // get the virtual positions of the nodes in a graph. This is unbounded.
         const [positionedNodes] = useSimpleGraph(simpleNodes, simpleEdges, localSizeOverrides, options);
@@ -61,26 +61,17 @@ export const MiniGraph = memo<MiniGraphProps>(
         const containerPadding = options.textSize;
         // adjust the position of the nodes to fit within the targetArea
         // get the containing rectangle of the graph and project it onto screen size and pos
-        const [virtualTopLeft, scaleX, scaleY] = useScreenScale(
+        const [screenNodes, newSize] = useScreenNodesVectorMethod(
+            screenPosition,
             screenSize,
             positionedNodes,
             localSizeOverrides,
-            containerPadding,
+            containerPadding * 1.1,
             options.titleHeight
         );
-        const screenNodes = useScreenNodes(
-            positionedNodes,
-            virtualTopLeft,
-            scaleX,
-            scaleY,
-            screenPosition,
-            localSizeOverrides,
-            containerPadding,
-            options.titleHeight
-        );
+
         // use the screenNodes as the initial positions managing the state of the nodes
         // this is updated using the onNodesPositioned
-
         const onResizeSetLocalSize = useCallback<NodeProps["onResizeNode"]>((name, size) => {
             setLocalSizeOverrides((oldSizes) => {
                 if (!size) {
@@ -99,16 +90,18 @@ export const MiniGraph = memo<MiniGraphProps>(
             });
         }, []);
         useEffect(() => onBubblePositions?.(screenNodes), [onBubblePositions, screenNodes]);
-        useOverlap(
-            name,
-            onResizeNeeded,
-            options.nodeMargin,
-            options.textSize,
-            options.titleHeight,
-            screenNodes,
-            screenPosition,
-            screenSize
-        );
+        // useOverlapCheck(name, onResizeNeeded, options, screenNodes, screenPosition, screenSize);
+        function diffRange(n1: number, n2: number) {
+            return Math.abs((n1 - n2) / n1) > 0.04;
+        }
+        if (diffRange(screenSize.width, newSize.width) || diffRange(screenSize.height, newSize.height)) {
+            onResizeNeeded(name, {
+                suggestedSize: {
+                    width: diffRange(screenSize.width, newSize.width) ? newSize.width : screenSize.width,
+                    height: diffRange(screenSize.height, newSize.height) ? newSize.height : screenSize.height,
+                },
+            });
+        }
         // notify parent graph that a node has been changed
         return (
             <>

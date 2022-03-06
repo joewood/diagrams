@@ -85,11 +85,11 @@ export interface GraphOptions extends Partial<PhysicsSettings> {
 export type RequiredGraphOptions = Required<GraphOptions>;
 
 export type ResizeNeededAction = {
-    overlappingX?: boolean;
-    overlappingY?: boolean;
-    shrinkingX?: boolean;
-    shrinkingY?: boolean;
-    suggestedSize?: Size;
+    // overlappingX?: boolean;
+    // overlappingY?: boolean;
+    // shrinkingX?: boolean;
+    // shrinkingY?: boolean;
+    suggestedSize: Size;
 };
 
 export const transition = {

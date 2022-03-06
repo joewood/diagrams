@@ -31,16 +31,16 @@ A force-based layout for directed acyclic graphs. This diagram uses a slight var
 
 Total Needed Space = M
 Measured Max Distance = Wm
-Space Avaialble = S (pixels)
+Space Available = S (pixels)
 Conversion between pixel to measured space = R
 
 Point in pixel space = Ps
-Point in measured space = Pm
+Point in measured space = Pv
 
-Ps = Pm * R
+Ps = Pv * R
 Width of left most box = W1s (in pixel space)
 Width of right most box = W2s
-Pm = Ps / R
+Pv = Ps / R
 
 M = W1s/2R + Wm + W2s/2R
 

@@ -26,20 +26,9 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
     );
     // Resize Demand - change the state
     const [graphSize, setGraphSize] = useState<Size | undefined>();
-    const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>(
-        (_name, { overlappingX, overlappingY, shrinkingX, shrinkingY, suggestedSize }) => {
-            setGraphSize(
-                (existingSize) =>
-                    (existingSize && {
-                        width: suggestedSize?.width ?? existingSize.width * (overlappingX ? 1.1 : shrinkingX ? 0.9 : 1),
-                        height:
-                            suggestedSize?.height ?? existingSize.height * (overlappingY ? 1.1 : shrinkingY ? 0.9 : 1),
-                    }) ||
-                    undefined
-            );
-        },
-        []
-    );
+    const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((_name, { suggestedSize }) => {
+        setGraphSize(suggestedSize);
+    }, []);
     useEffect(() => {
         setGraphSize((oldGraphSize) => (!oldGraphSize ? defaultContainerSize : oldGraphSize));
     }, [defaultContainerSize]);

@@ -71,6 +71,9 @@ export const Node: FC<NodeProps> = ({
         }),
         [isExpandedSubgraph, options.titleHeight, screenNode.size]
     );
+    const onMouseOverText = useCallback<MouseEventHandler<SVGTextElement>>( (args) => {
+        (args.target as any).setAttribute('fill', 'blue')
+    },[])
     const labelPosition = useMemo(
         () => ({
             ...screenNode.screenPosition,
@@ -141,6 +144,7 @@ export const Node: FC<NodeProps> = ({
                         cursor="pointer"
                         fill="black"
                         onClick={onClick}
+                        onMouseMove={onMouseOverText}
                     >
                         {isExpanded ? "-" : "+"}
                     </motion.text>

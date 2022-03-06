@@ -40,27 +40,9 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         );
         // Resize Demand - change the state
         const [graphSize, setGraphSize] = useState<Size>();
-        const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>(
-            (name, { overlappingX, overlappingY, shrinkingX, shrinkingY, suggestedSize }) => {
-                // console.log("RESIZE GRAPH: " + JSON.stringify(graphSize), {
-                //     overlappingX,
-                //     overlappingY,
-                //     shrinkingX,
-                //     shrinkingY,
-                //     suggestedSize,
-                // });
-                setGraphSize(
-                    (existingSize) =>
-                        suggestedSize ??
-                        ((existingSize && {
-                            width: existingSize.width * (overlappingX ? 1.1 : shrinkingX ? 0.9 : 1),
-                            height: existingSize.height * (overlappingY ? 1.1 : shrinkingY ? 0.9 : 1),
-                        }) ||
-                            undefined)
-                );
-            },
-            []
-        );
+        const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((name, { suggestedSize }) => {
+            setGraphSize(suggestedSize);
+        }, []);
         useEffect(() => {
             setGraphSize((oldGraphSize) => (!oldGraphSize ? defaultContainerSize : oldGraphSize));
         }, [defaultContainerSize]);
