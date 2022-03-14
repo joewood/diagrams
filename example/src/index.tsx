@@ -1,4 +1,14 @@
-import { Box, Center, ChakraProvider, Flex, Heading, theme } from "@chakra-ui/react";
+import {
+    Box,
+    Button,
+    Center,
+    ChakraProvider,
+    Flex,
+    Heading,
+    theme,
+    useColorMode,
+    useStyleConfig,
+} from "@chakra-ui/react";
 import { GraphOptions, PhysicsSettings, useGraphOptions } from "@diagrams/graph";
 import { SideBar } from "@diagrams/sidebar";
 import * as React from "react";
@@ -20,7 +30,7 @@ const Hello: FC = () => (
 );
 
 const GraphDemo: FC = () => (
-    <Center p={10} bg="#a0a0ff">
+    <Center p={10}>
         <Box>
             <h2>Force Based Layout</h2>
             <p>The demos in the section contain simple Forced Based Graph Layout</p>
@@ -54,12 +64,17 @@ const AppA: FC = () => {
         useDemo(options, DemoGraphTwoDeep, "Two Deep"),
         useDemo(options, DemoGraphThreeDeep, "Three Deep"),
     ];
+    const { colorMode, toggleColorMode } = useColorMode();
+    const style = useStyleConfig("Container");
     return (
-        <Box height="100vh" width="100vw" m={0} p={0} bg="#eee" textColor="black" position="relative">
-            <Flex as="header" width="100%" bg="#e0e0f0" justifyContent="space-between" height={`${navHeight}px`}>
+        <Box height="100vh" width="100vw" m={0} p={0} position="relative">
+            <Flex as="header" width="100%" sx={style} justifyContent="space-between" height={`${navHeight}px`}>
                 <Box flex="0 0 auto" ml={2}>
                     <Heading size="md">@diagrams/graph</Heading>
                 </Box>
+                <Button flex="0 0 auto" onClick={toggleColorMode}>{`${
+                    colorMode === "dark" ? "Light" : "Dark"
+                } Mode`}</Button>
             </Flex>
             <Box pos="absolute" top={`${navHeight}px`} left={0} height={`calc( 100% - ${navHeight}px )`}>
                 <SideBar
@@ -80,7 +95,6 @@ const AppA: FC = () => {
                     options={{
                         drawerWidth: navWidth,
                         linkElement: RouterLink,
-                        backgroundColor: "#e0e0f0",
                     }}
                 >
                     <PhysicsSettings options={options} updateOptions={setGraphOptions} />
@@ -91,8 +105,8 @@ const AppA: FC = () => {
                 position="absolute"
                 left={`${navWidth}px`}
                 top={`${navHeight}px`}
-                width={`calc( 100% - ${navWidth}px )`}
-                height={`calc( 100% - ${navHeight}px )`}
+                width={`calc( 100vw - ${navWidth}px )`}
+                height={`calc( 100vh - ${navHeight}px )`}
             >
                 <Routes>
                     {simpleGraphs.map((d) => (

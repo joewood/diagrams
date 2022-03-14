@@ -1,14 +1,16 @@
+import { keyBy } from "lodash";
 import * as React from "react";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Edges } from "./components/edges";
 import { MiniGraph, MiniGraphProps } from "./components/mini-graph";
-import { GraphOptions, Size, zeroPoint } from "./hooks/model";
 import { SvgContainer } from "./components/svg-container";
+import { useDefaultNodes } from "./hooks/dynamic-nodes";
+import { GraphOptions, SimpleEdge, Size, zeroPoint } from "./hooks/model";
+import { useBubbledPositions, useDefaultOptions } from "./hooks/use-ngraph";
 import { useDimensions } from "./use-dimensions";
-import { useDefaultOptions, useBubbledPositions } from "./hooks/use-ngraph";
 
-interface SimpleGraphProps
-    extends Pick<Required<MiniGraphProps>, "onSelectNode" | "selectedNode" | "simpleNodes" | "simpleEdges"> {
+interface SimpleGraphProps extends Pick<Required<MiniGraphProps>, "onSelectNode" | "selectedNodes" | "simpleNodes"> {
+    simpleEdges: SimpleEdge[];
     options?: GraphOptions;
 }
 
@@ -16,7 +18,7 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
     simpleEdges,
     simpleNodes,
     onSelectNode,
-    selectedNode,
+    selectedNodes,
     options: _options = {},
 }) => {
     const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
@@ -24,6 +26,9 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
         () => (targetSize && { width: targetSize.width / 2, height: targetSize.height / 2 }) || undefined,
         [targetSize]
     );
+    const ignoreParent = useMemo(() => simpleNodes.map((p) => ({ ...p, parent: null })), [simpleNodes]);
+    const defaultSimpleNodes = useDefaultNodes(ignoreParent);
+    const nodesDict = useMemo(() => keyBy(defaultSimpleNodes, (n) => n.name), [defaultSimpleNodes]);
     // Resize Demand - change the state
     const [graphSize, setGraphSize] = useState<Size | undefined>();
     const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((_name, { suggestedSize }) => {
@@ -36,25 +41,32 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
     const [edgeNodePositions, onBubblePositions] = useBubbledPositions();
     return (
         <div key="root" ref={ref} style={{ width: "100%", height: "100%", display: "block", overflow: "auto" }}>
-            <SvgContainer key="svg" textSize={options.textSize} screenSize={graphSize}>
+            <SvgContainer key="svg" nodeMargin={options.nodeMargin} screenSize={graphSize}>
                 {graphSize && (
                     <MiniGraph
                         key="graph"
                         name="root"
-                        simpleNodes={simpleNodes}
-                        simpleEdges={simpleEdges}
+                        simpleNodes={defaultSimpleNodes}
+                        localSimpleEdges={simpleEdges}
+                        allRoutedSimpleEdges={simpleEdges}
                         onSelectNode={onSelectNode}
-                        selectedNode={selectedNode}
+                        selectedNodes={selectedNodes ? selectedNodes : null}
                         onResizeNeeded={onResizeNeeded}
                         expanded={[]}
-                        level={1}
                         screenSize={graphSize}
                         screenPosition={zeroPoint}
                         onBubblePositions={onBubblePositions}
                         options={options}
                     />
                 )}
-                <Edges key="edges" name="root" edges={simpleEdges} positionDict={edgeNodePositions} options={options} />
+                <Edges
+                    key="edges"
+                    name="root"
+                    edges={simpleEdges}
+                    positionDict={edgeNodePositions}
+                    nodesDict={nodesDict}
+                    options={options}
+                />
             </SvgContainer>
         </div>
     );

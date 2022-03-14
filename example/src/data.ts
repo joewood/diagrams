@@ -1,5 +1,6 @@
 import { SimpleEdge, SimpleNode } from "@diagrams/graph";
 import { isArray, uniq } from "lodash";
+import { cubehelix, brewer, scale } from "chroma-js";
 
 interface Tree {
     [index: string]: Tree | string[];
@@ -28,18 +29,6 @@ const nodeTree = {
     },
 } as Tree;
 
-const styleMap: Record<string, Omit<SimpleNode, "name" | "positionHint" | "type" | "size" | "parent">> = {
-    Compute: {
-        backgroundColor: "yellow",
-    },
-    Network: {
-        backgroundColor: "#9090f0",
-    },
-    Data: {
-        backgroundColor: "#90f090",
-    },
-};
-
 // function treeToNodeArray(tree: Tree) {
 //     return Object.keys(tree).flatMap((node) => branchToNodeArray(Array.isArray(tree[node]) ? null : tree[node], node));
 // }
@@ -53,7 +42,6 @@ function branchToNodeArray(tree: Tree | string[] | null, branchName?: string, pa
     const node: SimpleNode | undefined =
         (branchName && {
             ...(parentNode ?? {}),
-            ...(styleMap[branchName] ?? {}),
             name: branchName!,
             parent: parentNode?.name ?? null,
         }) ||

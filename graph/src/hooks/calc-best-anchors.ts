@@ -1,23 +1,57 @@
 import { minBy } from "lodash";
 import { Point, Size } from "./model";
 
-const twoPoints = (point: Point, size: Size, directionX: number, directionY: number, arrowSize: number) => {
+export function direction(x: Point, y: Point): [number, number] {
+    const dx = y.x - x.x === 0 ? 0 : Math.abs(y.x - x.x) / (y.x - x.x);
+    const dy = y.y - x.y === 0 ? 0 : Math.abs(y.y - x.y) / (y.y - x.y);
+    return [dx, dy];
+}
+
+const twoPoints = (point: Point, size: Size, arrowSize: number) => {
     const anchors = [
         {
-            anchor: { x: point.x, y: point.y + directionY * (size.height / 2) },
-            arrowStem: { x: point.x, y: point.y + directionY * (size.height / 2 + arrowSize) },
+            anchor: { x: point.x, y: point.y + 1 * (size.height / 2) },
+            arrowStem: { x: point.x, y: point.y + 1 * (size.height / 2 + arrowSize) },
+            directionX: 0,
+            directionY: 1,
         },
         {
-            anchor: { x: point.x + directionX * (size.width / 2), y: point.y },
-            arrowStem: { x: point.x + directionX * (size.width / 2 + arrowSize), y: point.y },
+            anchor: { x: point.x + 1 * (size.width / 2), y: point.y },
+            arrowStem: { x: point.x + 1 * (size.width / 2 + arrowSize), y: point.y },
+            directionX: 1,
+            directionY: 0,
+        },
+        {
+            anchor: { x: point.x, y: point.y - 1 * (size.height / 2) },
+            arrowStem: { x: point.x, y: point.y - 1 * (size.height / 2 + arrowSize) },
+            directionX: 0,
+            directionY: -1,
+        },
+        {
+            anchor: { x: point.x - 1 * (size.width / 2), y: point.y },
+            arrowStem: { x: point.x - 1 * (size.width / 2 + arrowSize), y: point.y },
+            directionX: -1,
+            directionY: 0,
         },
     ];
     return anchors;
 };
 
-function getDistance(to: Point, from: Point) {
+export function getDistance(to: Point, from: Point) {
     // use Pythagoras
     return Math.sqrt((to.x - from.x) ** 2 + (to.y - from.y) ** 2);
+}
+
+export interface AnchorDetails {
+    fromAnchor: Point;
+    toAnchor: Point;
+    fromArrowStem: Point;
+    toArrowStem: Point;
+    distance: number;
+    directionX: number;
+    directionY: number;
+    fromNormal: Point;
+    toNormal: Point;
 }
 
 /** For a given Node's position and size, provide a good anchor point when joining from a point */
@@ -27,47 +61,85 @@ export function getAnchors(
     fromPoint: Point,
     fromSize: Size,
     arrowSize: number
-): [Point, Point, Point, Point] {
+): AnchorDetails {
+    //  [Point, Point, Point, Point, Point, Point] {
     let dx = toPoint.x - fromPoint.x;
     let dy = toPoint.y - fromPoint.y;
-    const directionX = dx === 0 ? 1 : Math.abs(dx) / dx;
-    const directionY = dy === 0 ? 1 : Math.abs(dy) / dy;
-    const distances: { from: Point; to: Point; distance: number }[] = [];
+    // const directionX = dx === 0 ? 1 : Math.abs(dx) / dx;
+    // const directionY = dy === 0 ? 1 : Math.abs(dy) / dy;
+    // track all possible anchor points, don't calculate normal until we've found the best two anchors
+    const distances: Omit<AnchorDetails, "fromNormal" | "toNormal">[] = [];
 
-    for (const { anchor: from, arrowStem: fromArrowStem } of twoPoints(
+    for (const { anchor: from, arrowStem: fromArrowStem, directionX: fromDx, directionY: fromDy } of twoPoints(
         fromPoint,
         fromSize,
-        directionX,
-        directionY,
         arrowSize
     )) {
-        for (const { anchor: to, arrowStem: toArrowStem } of twoPoints(
+        for (const { anchor: to, arrowStem: toArrowStem, directionX: toDx, directionY: toDy } of twoPoints(
             toPoint,
             toSize,
-            directionX * -1,
-            directionY * -1,
             arrowSize
         )) {
-            distances.push({ from, to, distance: getDistance(toArrowStem, fromArrowStem) });
+            const angle = Math.acos(
+                (Math.abs((toArrowStem.x - fromArrowStem.x) * fromDx) +
+                    Math.abs((toArrowStem.y - fromArrowStem.y) * fromDy)) /
+                    getDistance(toArrowStem, fromArrowStem)
+            );
+            // console.log(
+            //     `angle ${(angle / Math.PI / 2) * 360} Dist:${getDistance(toArrowStem, fromArrowStem)} x:${Math.abs(
+            //         (toArrowStem.x - fromArrowStem.x) * directionX
+            //     )} y:${Math.abs((toArrowStem.y - fromArrowStem.y) * directionY)}`
+            // );
+            if (Math.abs(angle) < Math.PI / 2.5)
+                distances.push({
+                    fromAnchor: from,
+                    toAnchor: to,
+                    fromArrowStem,
+                    toArrowStem,
+                    distance: getDistance(toArrowStem, fromArrowStem),
+                    directionX: toDx,
+                    directionY: toDy,
+                });
         }
     }
     const min = minBy(distances, (p) => p.distance);
-    if (!min) return [fromPoint, fromPoint, toPoint, toPoint];
+    if (!min)
+        return {
+            fromAnchor: fromPoint,
+            fromArrowStem: fromPoint,
+            fromNormal: fromPoint,
+            toNormal: toPoint,
+            toArrowStem: toPoint,
+            toAnchor: toPoint,
+            directionX: 1,
+            directionY: 1,
+            distance: 0,
+        };
     // if the point is further down/up than left/right then use bottom/top anchor
-    let anchorFrom = min.from;
-    let anchorTo = min.to;
+    let fromAnchor = min.fromAnchor;
+    let toAnchor = min.toAnchor;
     const getNormalExtent = (anchor: number, point: number, anchorToAnchorDist: number) => {
         const pointToAnchor = anchor - point;
         const dir = Math.abs(pointToAnchor) / (pointToAnchor === 0 ? 1 : pointToAnchor);
         return (anchorToAnchorDist * dir) / 2;
     };
-    let normalFrom: Point = {
-        x: anchorFrom.x + getNormalExtent(anchorFrom.x, fromPoint.x, Math.abs(anchorTo.x - anchorFrom.x)),
-        y: anchorFrom.y + getNormalExtent(anchorFrom.y, fromPoint.y, Math.abs(anchorTo.y - anchorFrom.y)),
+    let fromNormal: Point = {
+        x: fromAnchor.x + getNormalExtent(fromAnchor.x, fromPoint.x, Math.abs(toAnchor.x - fromAnchor.x)),
+        y: fromAnchor.y + getNormalExtent(fromAnchor.y, fromPoint.y, Math.abs(toAnchor.y - fromAnchor.y)),
     };
-    let normalTo: Point = {
-        x: anchorTo.x + getNormalExtent(anchorTo.x, toPoint.x, Math.abs(anchorTo.x - anchorFrom.x)),
-        y: anchorTo.y + getNormalExtent(anchorTo.y, toPoint.y, Math.abs(anchorTo.y - anchorFrom.y)),
+    let toNormal: Point = {
+        x: toAnchor.x + getNormalExtent(toAnchor.x, toPoint.x, Math.abs(toAnchor.x - fromAnchor.x)),
+        y: toAnchor.y + getNormalExtent(toAnchor.y, toPoint.y, Math.abs(toAnchor.y - fromAnchor.y)),
     };
-    return [anchorFrom, normalFrom, normalTo, anchorTo];
+    return {
+        fromAnchor,
+        fromArrowStem: min.fromArrowStem,
+        fromNormal,
+        toNormal,
+        toArrowStem: min.toArrowStem,
+        toAnchor,
+        directionX: min.directionX,
+        directionY: min.directionY,
+        distance: min.distance,
+    };
 }

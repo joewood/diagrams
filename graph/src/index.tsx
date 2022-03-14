@@ -1,5 +1,5 @@
-export { ExpandableGraph } from "./expandable-graph";
-export type { ExpandableGraphProps } from "./expandable-graph";
+export { ExpandableGraph,useSelectNodes, useExpandToggle } from "./expandable-graph";
+export type { ExpandableGraphProps,  } from "./expandable-graph";
 export type { MiniGraphProps } from "./components/mini-graph";
 export type { GraphOptions, RequiredGraphOptions, SimpleEdge, SimpleNode } from "./hooks/model";
 export { PhysicsSettings, useGraphOptions } from "./physics";

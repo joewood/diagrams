@@ -1,81 +1,77 @@
+import { useColorModeValue } from "@chakra-ui/react";
+import { mix } from "chroma-js";
 import { useMemo } from "react";
 import { Point, PositionedNode, ScreenPositionedNode, Size } from "./model";
 import { rectanglesOverlapSize } from "./use-overlap";
 
-function distanceBetween(origin: PositionedNode, test: PositionedNode) {
+/** Pythagoras to calculate the distance from the origin to x,y */
+export function extent(x: number, y: number) {
+    return Math.sqrt(x ** 2 + y ** 2);
+}
+
+export function unitVector(x: number, y: number) {
+    const distance = extent(x, y);
+    return { x: x / distance, y: y / distance };
+}
+
+function directBetweenNodes(origin: PositionedNode, test: PositionedNode) {
     if (origin === test) return { distance: 0, vx: 0, vy: 0 };
     const dx = test.virtualPos.x - origin.virtualPos.x;
     const dy = test.virtualPos.y - origin.virtualPos.y;
-    const dp = dotProduct(dx, dy);
+    const dp = unitVector(dx, dy);
     return {
-        distance: Math.sqrt(dx ** 2 + dy ** 2),
+        distance: extent(dx, dy),
         vx: dp.x,
         vy: dp.y,
     };
 }
 
 function getScreenPosNode(
-    origin: Pick<ScreenPositionedNode, "screenPosition" | "size">,
+    origin: Point & Size,
     node: PositionedNode,
     vx: number,
     vy: number,
-    screenPositions: ScreenPositionedNode[],
-    containerPadding: number
-) {
-    const widths = origin.size.width / 2 + node.size.width / 2 + containerPadding * 2;
-    const heights = origin.size.height / 2 + node.size.height / 2 + containerPadding * 2;
-    let distance = Math.sqrt(widths ** 2 + heights ** 2);
-    while (true) {
-        const newScreenPos = {
-            x: origin.screenPosition.x + vx * distance,
-            y: origin.screenPosition.y + vy * distance,
-        };
-        let [overlapX, overlapY] = [false, false];
-        for (const existingNode of screenPositions) {
-            const [newOverlapX, newOverlapY] = rectanglesOverlapSize(
-                existingNode.screenPosition,
-                existingNode.size,
-                newScreenPos,
-                node.size,
-                containerPadding
-            );
-            overlapX ||= newOverlapX;
-            overlapY ||= newOverlapY;
-            // if any overlap then give up and increment the distance
-            if (overlapX || overlapY) break;
-        }
-        if (!overlapX && !overlapY) {
-            return {
-                ...node,
-                screenPosition: newScreenPos,
-            } as ScreenPositionedNode;
-        }
-        distance += containerPadding;
+    screenPositions: (Point & Size)[],
+    nodeMargin: number
+): Point & Size {
+    let screenPosition = { ...origin, ...node.size };
+    let n = 0;
+    if (screenPositions.length === 0) {
+        return screenPosition;
     }
+    let overlapping: (Point & Size) | null = null;
+    while (n < screenPositions.length * 100) {
+        let overlapped = false;
+        n++;
+        for (const existingNode of screenPositions) {
+            const newScreenPos = rectanglesOverlapSize(existingNode, screenPosition, nodeMargin, vx, vy);
+            if (!!newScreenPos) {
+                overlapped = true;
+                overlapping = existingNode;
+                screenPosition = { ...screenPosition, ...newScreenPos };
+                break;
+            }
+        }
+        if (!overlapped) return screenPosition;
+    }
+    console.log(`END ${n} vx:${vx},vy:${vy}`, overlapping, screenPosition);
+    console.log(`END-2 ${screenPositions.length} vx:${vx},vy:${vy} ${JSON.stringify(screenPositions, null, 2)}`);
+    return screenPosition;
 }
 
-function dotProduct(x: number, y: number) {
-    const d = Math.sqrt(x ** 2 + y ** 2);
-    return { x: x / d, y: y / d };
-}
-
-export function useScreenNodesVectorMethod(
-    screenPosition: Point,
-    screenSize: Size,
+function useNodeDirections(
     positionedNodes: PositionedNode[],
-    sizeOverrides: Record<string, Size>,
-    containerPadding: number,
-    titlePadding: number
-): [ScreenPositionedNode[], Size] {
-    const screenRatio = dotProduct(screenSize.width, screenSize.height);
-    const distances = useMemo(() => {
+    screenRatioX: number,
+    sizeOverrides: Record<string, Size>
+) {
+    return useMemo(() => {
         const getNodeSize = (node: PositionedNode) => sizeOverrides[node.name] ?? node.size;
         const allPos = positionedNodes
             .flatMap((originNode) =>
                 positionedNodes.map((testNode) => ({
                     origin: originNode,
                     test: testNode,
-                    ...distanceBetween(originNode, testNode),
+                    ...directBetweenNodes(originNode, testNode),
                 }))
             )
             .filter(({ origin, test }) => origin !== test)
@@ -84,88 +80,90 @@ export function useScreenNodesVectorMethod(
             return [{ origin: positionedNodes[0], test: positionedNodes[0], distance: 0, vx: 0, vy: 0 }];
         }
         if (positionedNodes.length === 2) {
-            const twoNodeRatio = dotProduct(
+            const twoNodeRatio = unitVector(
                 getNodeSize(positionedNodes[0]).width + getNodeSize(positionedNodes[1]).width,
                 getNodeSize(positionedNodes[0]).height + getNodeSize(positionedNodes[1]).height
             );
-            return twoNodeRatio.x > screenRatio.x
+            return twoNodeRatio.x > screenRatioX
                 ? allPos.map((p) => ({ ...p, vx: 0 }))
                 : allPos.map((p) => ({ ...p, vy: 0 }));
         }
         return allPos;
-    }, [positionedNodes, screenRatio.x, sizeOverrides]);
+    }, [positionedNodes, screenRatioX, sizeOverrides]);
+}
 
-    const [screenPositions, newScreenSize] = useMemo(() => {
-        if (positionedNodes.length === 0) return [[], { width: containerPadding * 2, height: containerPadding * 2 }];
+
+export function useScreenNodesVectorMethod(
+    nodeDict: Record<string,PositionedNode>,
+    screenPosition: Point,
+    screenSize: Size,
+    positionedNodes: PositionedNode[],
+    sizeOverrides: Record<string, Size>,
+    nodeMargin: number,
+    titlePadding: number
+): [ScreenPositionedNode[], Size] {
+    const screenRatio = unitVector(screenSize.width, screenSize.height);
+    const nodeDirections = useNodeDirections(positionedNodes, screenRatio.x, sizeOverrides);
+    const blend = useColorModeValue("white", "black");
+    const possDict = useMemo<Record<string, Point & Size>>(() => {
+        if (positionedNodes.length === 0) return {}; //{ width: containerPadding * 2, height: containerPadding * 2 }];
         const getNodeSize = (node: PositionedNode) => sizeOverrides[node.name] ?? node.size;
-        const screenPositioned: Record<string, ScreenPositionedNode> = {};
-        const screenPositions: ScreenPositionedNode[] = [];
+        const screenPositioned: Record<string, Point & Size> = {};
+        const screenPositions: (Point & Size)[] = [];
         const firstNode = getScreenPosNode(
-            {
-                screenPosition: {
-                    x: screenSize.width / 2,
-                    y: screenSize.height / 2,
-                },
-                size: { width: 1, height: 1 },
-            },
-            { ...distances[0].origin, size: getNodeSize(distances[0].origin) },
+            { x: 0, y: 0, width: nodeMargin, height: nodeMargin },
+            { ...nodeDirections[0].origin, size: getNodeSize(nodeDirections[0].origin) },
             1,
             1,
             screenPositions,
-            containerPadding
+            nodeMargin
         );
-        screenPositioned[distances[0].origin.name] = firstNode;
+        screenPositioned[nodeDirections[0].origin.name] = firstNode;
         screenPositions.push(firstNode);
         while (screenPositions.length < positionedNodes.length) {
-            for (const test of distances) {
-                if (!screenPositioned[test.origin.name]) continue;
-                if (!screenPositioned[test.test.name]) {
-                    const newNode = getScreenPosNode(
-                        screenPositioned[test.origin.name],
-                        { ...test.test, size: getNodeSize(test.test) },
-                        test.vx * screenRatio.x,
-                        test.vy * screenRatio.y,
+            for (const nodeDir of nodeDirections) {
+                if (!screenPositioned[nodeDir.origin.name]) continue;
+                if (!screenPositioned[nodeDir.test.name]) {
+                    const newPos = getScreenPosNode(
+                        screenPositioned[nodeDir.origin.name],
+                        { ...nodeDir.test, size: getNodeSize(nodeDir.test) },
+                        nodeDir.vx * screenRatio.x,
+                        nodeDir.vy * screenRatio.y,
                         screenPositions,
-                        containerPadding
+                        nodeMargin
                     );
-                    screenPositioned[newNode.name] = newNode;
-                    screenPositions.push(newNode);
+                    screenPositioned[nodeDir.test.name] = newPos;
+                    screenPositions.push(newPos);
                     break;
                 }
             }
         }
+        return screenPositioned;
+    }, [nodeMargin, nodeDirections, positionedNodes.length, screenRatio.x, screenRatio.y, sizeOverrides]);
+
+    const [screenPositions, newScreenSize] = useMemo(() => {
+        const poss = Object.values(possDict);
         // find the extents of our new screen coordinated graph (it could be anyplace)
-        const minX = Math.min(...screenPositions.map((x) => x.screenPosition.x - x.size.width / 2 - containerPadding));
-        const maxX = Math.max(...screenPositions.map((x) => x.screenPosition.x + x.size.width / 2 + containerPadding));
-        const minY = Math.min(...screenPositions.map((x) => x.screenPosition.y - x.size.height / 2 - containerPadding));
-        const maxY = Math.max(...screenPositions.map((x) => x.screenPosition.y + x.size.height / 2 + containerPadding));
+        const minX = poss.length === 0 ? 0 : Math.min(...poss.map((p) => p.x - p.width / 2));
+        const maxX = poss.length === 0 ? 0 : Math.max(...poss.map((p) => p.x + p.width / 2));
+        const minY = poss.length === 0 ? 0 : Math.min(...poss.map((p) => p.y - p.height / 2));
+        const maxY = poss.length === 0 ? 0 : Math.max(...poss.map((p) => p.y + p.height / 2));
         // work out the width and height, if it's smaller than our space then we can place it in the middle
         const graphWidth = maxX - minX;
         const graphHeight = maxY - minY;
         // the adjustment is width difference divided by 2 (or 0 if negative), plus the screenPosition adjusted
-        const possibleMarginX = Math.max(screenSize.width - graphWidth, 0) / 2;
-        const adjustX = possibleMarginX + screenPosition.x - minX;
-        const possibleMarginY = Math.max(screenSize.height - titlePadding - graphHeight, 0) / 2;
-        const adjustY = possibleMarginY + screenPosition.y - minY + titlePadding;
+        const adjustX = screenPosition.x - minX + nodeMargin;
+        const adjustY = screenPosition.y - minY + titlePadding;
         return [
-            screenPositions.map((p) => ({
+            positionedNodes.map<ScreenPositionedNode>((p) => ({
                 ...p,
-                screenPosition: { x: p.screenPosition.x + adjustX, y: p.screenPosition.y + adjustY },
+                parentScreenPosition: screenPosition,
+                size: { width: possDict[p.name].width, height: possDict[p.name].height },
+                color: p.color!,
+                screenPosition: { x: possDict[p.name].x + adjustX, y: possDict[p.name].y + adjustY },
             })),
-            { width: graphWidth + containerPadding * 2, height: graphHeight + titlePadding + containerPadding },
+            { width: graphWidth + nodeMargin * 2, height: graphHeight + titlePadding + nodeMargin },
         ];
-    }, [
-        containerPadding,
-        distances,
-        positionedNodes.length,
-        screenPosition.x,
-        screenPosition.y,
-        screenRatio.x,
-        screenRatio.y,
-        screenSize.height,
-        screenSize.width,
-        sizeOverrides,
-        titlePadding,
-    ]);
+    }, [nodeMargin, positionedNodes, possDict, screenPosition, titlePadding]);
     return [screenPositions, newScreenSize];
 }

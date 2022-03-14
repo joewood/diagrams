@@ -1,48 +1,45 @@
 import { Box } from "@chakra-ui/react";
-import { GraphOptions, SimpleGraph, useDefaultOptions } from "@diagrams/graph";
+import { GraphOptions, SimpleGraph, useDefaultOptions, useSelectNodes } from "@diagrams/graph";
 import * as React from "react";
-import { FC, useCallback, useMemo, useState } from "react";
+import { FC, useMemo } from "react";
 import { edges, nodesLeaf } from "./data";
 
 export const DemoGraphSimpleBusy: FC<{
     options: GraphOptions;
 }> = ({ options: _options }) => {
-    const [selected, setSelected] = useState<string | null>(null);
-    const options = useDefaultOptions(_options);
-    const onSelect = useCallback(({ name }: { name: string }) => {
-        setSelected(name);
-    }, []);
-    const largeNodes = useMemo(() => {
-        const t = [
+    const moreNodes = useMemo(
+        () => [
             ...nodesLeaf.map((node) => ({
                 ...node,
-                shadow: true,
             })),
             ...nodesLeaf.map((node) => ({
                 ...node,
                 name: node.name + "-2",
-                shadow: true,
             })),
-        ];
-        return t.map((node) => ({
+        ],
+        []
+    );
+    const [selected, setSelected] = useSelectNodes(moreNodes);
+    const options = useDefaultOptions(_options);
+    const largeNodes = useMemo(() => {
+        return moreNodes.map((node) => ({
             ...node,
-            size:
-                node.name === selected
-                    ? {
-                          width: (node.size ?? options.defaultSize).width * 2,
-                          height: (node.size ?? options.defaultSize).height * 2,
-                      }
-                    : node.size,
+            size: selected.includes(node.name)
+                ? {
+                      width: (node.size?.width ?? options.defaultWidth) * 2,
+                      height: (node.size?.height ?? options.defaultHeight) * 2,
+                  }
+                : node.size,
         }));
-    }, [options.defaultSize, selected]);
+    }, [moreNodes, options.defaultHeight, options.defaultWidth, selected]);
     return (
         <Box width="100%" height="100%">
             <SimpleGraph
                 simpleNodes={largeNodes}
                 simpleEdges={edges}
                 options={options}
-                onSelectNode={onSelect}
-                selectedNode={selected}
+                onSelectNode={setSelected}
+                selectedNodes={selected}
             />
             ;
         </Box>

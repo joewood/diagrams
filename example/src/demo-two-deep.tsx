@@ -1,37 +1,28 @@
 import { Box } from "@chakra-ui/react";
-import { ExpandableGraph, ExpandableGraphProps, GraphOptions, useDefaultOptions } from "@diagrams/graph";
-import { uniq } from "lodash";
+import { ExpandableGraph, GraphOptions, useDefaultOptions, useExpandToggle, useSelectNodes } from "@diagrams/graph";
 import * as React from "react";
-import { FC, useCallback, useState } from "react";
+import { FC } from "react";
 import { edges, nodesL2 } from "./data";
 
 export const DemoGraphTwoDeep: FC<{
     options: GraphOptions;
 }> = ({ options: _options }) => {
-    const [expanded, setExpanded] = useState<string[]>([]);
-    const [selectedNode, setSelectedNode] = useState<string | null>(null);
+    const nodes = nodesL2.map((node) => ({
+        ...node,
+    }));
+    const [selectedNodes, setSelectedNode] = useSelectNodes(nodes);
+    const [expanded, setExpanded] = useExpandToggle(nodes);
     const options = useDefaultOptions(_options);
-    const onExpandToggleNode = useCallback<Required<ExpandableGraphProps>["onExpandToggleNode"]>(
-        ({ name, expand }) => setExpanded((exp) => (expand ? uniq([...exp, name]) : exp.filter((e) => e !== name))),
-        []
-    );
-    const onSelectNode = useCallback<Required<ExpandableGraphProps>["onSelectNode"]>(
-        ({ name }) => setSelectedNode(name),
-        []
-    );
     return (
         <Box width="100%" height="100%">
             <ExpandableGraph
                 key="expandable"
-                simpleNodes={nodesL2.map((node) => ({
-                    ...node,
-                    shadow: !node.parent,
-                }))}
+                simpleNodes={nodes}
                 simpleEdges={edges}
-                onExpandToggleNode={onExpandToggleNode}
+                onExpandToggleNode={setExpanded}
                 expanded={expanded}
-                onSelectNode={onSelectNode}
-                selectedNode={selectedNode}
+                onSelectNode={setSelectedNode}
+                selectedNodes={selectedNodes}
                 options={options}
             />
         </Box>

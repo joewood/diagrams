@@ -5,7 +5,9 @@ import {
     GraphOptions,
     SimpleEdge,
     SimpleNode,
-    useDefaultOptions
+    useDefaultOptions,
+    useExpandToggle,
+    useSelectNodes,
 } from "@diagrams/graph";
 import { uniq } from "lodash";
 import * as React from "react";
@@ -15,12 +17,10 @@ const nodesBasic: SimpleNode[] = [
     {
         name: "One",
         parent: null,
-        shadow: true,
     },
     {
         name: "two",
         parent: null,
-        shadow: true,
     },
     {
         name: "one.1",
@@ -41,27 +41,19 @@ const edges2: SimpleEdge[] = []; //{ from: "one.1", to: "two.1", name: "one-two"
 export const DemoGraphTwoDeepBasic: FC<{
     options: GraphOptions;
 }> = ({ options: _options }) => {
-    const [expanded, setExpanded] = useState<string[]>([]);
-    const [selectedNode, setSelectedNode] = useState<string | null>(null);
+    const [expanded, setExpanded] = useExpandToggle(nodesBasic);
+    const [selectedNode, setSelectedNode] = useSelectNodes(nodesBasic);
     const options = useDefaultOptions(_options);
-    const onExpandToggleNode = useCallback<Required<ExpandableGraphProps>["onExpandToggleNode"]>(
-        ({ name, expand }) => setExpanded((exp) => (expand ? uniq([...exp, name]) : exp.filter((e) => e !== name))),
-        []
-    );
-    const onSelectNode = useCallback<Required<ExpandableGraphProps>["onSelectNode"]>(
-        ({ name }) => setSelectedNode(name),
-        []
-    );
     return (
         <Box width="100%" height="100%">
             <ExpandableGraph
                 key="expandable"
                 simpleNodes={nodesBasic}
                 simpleEdges={edges2}
-                onExpandToggleNode={onExpandToggleNode}
+                onExpandToggleNode={setExpanded}
                 expanded={expanded}
-                onSelectNode={onSelectNode}
-                selectedNode={selectedNode}
+                onSelectNode={setSelectedNode}
+                selectedNodes={selectedNode}
                 options={options}
             />
         </Box>

@@ -1,6 +1,6 @@
-import { mix } from "chroma-js";
+import { keyBy } from "lodash";
 import * as React from "react";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
     Point,
     RequiredGraphOptions,
@@ -16,19 +16,22 @@ import { Node, NodeProps } from "./node";
 
 export interface MiniGraphProps {
     simpleNodes: SimpleNode[];
-    simpleEdges: SimpleEdge[];
+    localSimpleEdges: SimpleEdge[];
+    allRoutedSimpleEdges: SimpleEdge[];
     screenSize: Size;
     screenPosition: Point;
-    onSelectNode?: (args: { name: string }) => void;
+    onSelectNode?: (args: { name: string; selected: boolean }) => void;
     onExpandToggleNode?: (args: { name: string; expand: boolean }) => void;
     expanded: string[];
-    selectedNode?: string | null;
+    selectedNodes?: string[] | null;
     name: string;
-    level: number;
     onResizeNeeded: (name: string, action: ResizeNeededAction) => void;
     onBubblePositions: (nodes: ScreenRect[]) => void;
     onGetSubgraph?: (name: string) => SimpleNode[];
-    options: Pick<RequiredGraphOptions, "defaultSize" | "textSize" | "iterations" | "titleHeight" | "nodeMargin">;
+    options: Pick<
+        RequiredGraphOptions,
+        "defaultWidth" | "defaultHeight" | "textSize" | "iterations" | "titleHeight" | "nodeMargin"
+    >;
 }
 
 /** This Component renders Simple Nodes by positioning them in a graph.
@@ -37,36 +40,35 @@ export interface MiniGraphProps {
  */
 export const MiniGraph = memo<MiniGraphProps>(
     ({
-        simpleEdges,
+        localSimpleEdges,
+        allRoutedSimpleEdges,
         simpleNodes,
         onSelectNode,
-        selectedNode,
+        selectedNodes,
         screenPosition,
         onResizeNeeded,
         onGetSubgraph,
         name,
-        level,
         screenSize,
         onExpandToggleNode,
         expanded,
         onBubblePositions,
         options,
     }) => {
-        // console.log("Size " + JSON.stringify(screenSize));
         const [localSizeOverrides, setLocalSizeOverrides] = useState<Record<string, Size>>({});
         // get the virtual positions of the nodes in a graph. This is unbounded.
-        const [positionedNodes] = useSimpleGraph(simpleNodes, simpleEdges, localSizeOverrides, options);
+        const [positionedNodes] = useSimpleGraph(simpleNodes, localSimpleEdges, localSizeOverrides, options);
         // Resize Demand - change the state
-
-        const containerPadding = options.textSize;
+        const nodeDict = useMemo(() => keyBy(positionedNodes, (p) => p.name),[positionedNodes]);
         // adjust the position of the nodes to fit within the targetArea
         // get the containing rectangle of the graph and project it onto screen size and pos
         const [screenNodes, newSize] = useScreenNodesVectorMethod(
+            nodeDict,
             screenPosition,
             screenSize,
             positionedNodes,
             localSizeOverrides,
-            containerPadding * 1.1,
+            options.nodeMargin,
             options.titleHeight
         );
 
@@ -83,7 +85,7 @@ export const MiniGraph = memo<MiniGraphProps>(
                     oldSizes[name]?.width !== size.width ||
                     oldSizes[name]?.height !== size.height
                 ) {
-                    console.log(`Setting Local Size for: ${name} ${JSON.stringify(size)}`);
+                    // console.log(`Setting Local Size for: ${name} ${JSON.stringify(size)}`);
                     return { ...oldSizes, [name]: size };
                 }
                 return oldSizes;
@@ -92,7 +94,7 @@ export const MiniGraph = memo<MiniGraphProps>(
         useEffect(() => onBubblePositions?.(screenNodes), [onBubblePositions, screenNodes]);
         // useOverlapCheck(name, onResizeNeeded, options, screenNodes, screenPosition, screenSize);
         function diffRange(n1: number, n2: number) {
-            return Math.abs((n1 - n2) / n1) > 0.04;
+            return Math.abs((n1 - n2) / n1) > 0.01;
         }
         if (diffRange(screenSize.width, newSize.width) || diffRange(screenSize.height, newSize.height)) {
             onResizeNeeded(name, {
@@ -109,23 +111,17 @@ export const MiniGraph = memo<MiniGraphProps>(
                     <Node
                         key={node.name}
                         screenNode={node}
+                        allRoutedSimpleEdges={allRoutedSimpleEdges}
                         showExpandButton={(onGetSubgraph?.(node.name)?.length ?? 0) > 0}
                         subNodes={onGetSubgraph?.(node.name)}
                         onExpandToggleNode={onExpandToggleNode}
                         isExpanded={expanded.includes(node.name)}
                         expanded={expanded}
-                        level={level + 1}
-                        backgroundColor={mix(node.backgroundColor ?? "gray", "rgba(255,255,255,0)", 0.4).css()}
-                        borderColor={mix(
-                            node.backgroundColor ?? "gray",
-                            "rgba(0,0,0,0.5)",
-                            expanded.includes(node.name) ? 0.6 : 0.3
-                        ).css()}
                         onSelectNode={onSelectNode}
                         onGetSubgraph={onGetSubgraph}
                         onBubblePositions={onBubblePositions}
                         onResizeNode={onResizeSetLocalSize}
-                        selectedNode={selectedNode}
+                        selectedNodes={selectedNodes}
                         options={options}
                     />
                 ))}

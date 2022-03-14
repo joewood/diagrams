@@ -1,22 +1,55 @@
-import { mix } from "chroma-js";
-import { keyBy, mapValues } from "lodash";
+import { Box, useColorModeValue, useStyleConfig } from "@chakra-ui/react";
+import { brewer, mix, scale } from "chroma-js";
+import { keyBy, mapValues, uniq } from "lodash";
 import * as React from "react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Edges } from "./components/edges";
 import { MiniGraph, MiniGraphProps } from "./components/mini-graph";
-import { GraphOptions, Size, zeroPoint } from "./hooks/model";
 import { SvgContainer } from "./components/svg-container";
-import { useDimensions } from "./use-dimensions";
+import { getVisibleNode, useDefaultNodes } from "./hooks/dynamic-nodes";
+import { GraphOptions, SimpleEdge, SimpleNode, Size, zeroPoint } from "./hooks/model";
 import { useBubbledPositions, useChildrenNodesByParent, useDefaultOptions } from "./hooks/use-ngraph";
-import { getVisibleNode } from "./hooks/dynamic-nodes";
+import { useDimensions } from "./use-dimensions";
+
+export function getAllChildrenName(n: string, nodesByParent: Record<string, SimpleNode[]>): string[] {
+    return [n, ...(nodesByParent[n]?.flatMap((p) => getAllChildrenName(p.name, nodesByParent)) ?? [])];
+}
 
 // type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode" |"";
+export function useExpandToggle(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onExpandToggleNode"]] {
+    const [expanded, setExpanded] = useState<string[]>([]);
+    const nodesByParent = useChildrenNodesByParent(nodes);
+    const onExpandToggleNode = useCallback<Required<ExpandableGraphProps>["onExpandToggleNode"]>(
+        ({ name, expand }) => {
+            setExpanded((previous) => {
+                if (expand) return uniq([...previous, name]);
+                const childrenNames = getAllChildrenName(name, nodesByParent);
+                return previous.filter((e) => !childrenNames.includes(e));
+            });
+        },
+        [nodesByParent]
+    );
+    return [expanded, onExpandToggleNode];
+}
+
+export function useSelectNodes(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onSelectNode"]] {
+    const [selectedNode, setSelectedNode] = useState<string[]>([]);
+    const nodesByParent = useChildrenNodesByParent(nodes);
+    const onSelectNode = useCallback<Required<ExpandableGraphProps>["onSelectNode"]>(
+        ({ name, selected }) => {
+            setSelectedNode((prev) => {
+                const childrenNames = getAllChildrenName(name, nodesByParent);
+                return !selected ? prev.filter((p) => !childrenNames.includes(p)) : uniq([...prev, ...childrenNames]);
+            });
+        },
+        [nodesByParent]
+    );
+    return [selectedNode, onSelectNode];
+}
 
 export interface ExpandableGraphProps
-    extends Pick<
-        MiniGraphProps,
-        "onSelectNode" | "selectedNode" | "simpleNodes" | "simpleEdges" | "onExpandToggleNode"
-    > {
+    extends Pick<MiniGraphProps, "onSelectNode" | "selectedNodes" | "simpleNodes" | "onExpandToggleNode"> {
+    simpleEdges: SimpleEdge[];
     expanded: string[];
     options?: GraphOptions;
 }
@@ -26,16 +59,17 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         simpleEdges,
         simpleNodes,
         onSelectNode,
-        selectedNode,
+        selectedNodes,
         onExpandToggleNode,
         expanded,
         options: _options = {},
     }) => {
-        const options = useDefaultOptions(_options);
+        const [zoom] = useState(1);
+        const options = useDefaultOptions(_options, zoom);
 
-        const [ref, { size: targetSize }] = useDimensions<HTMLDivElement>();
+        const [dimensionsRef, { size: targetSize }] = useDimensions<HTMLDivElement>();
         const defaultContainerSize = useMemo(
-            () => (targetSize && { width: targetSize.width / 2, height: targetSize.height / 2 }) || undefined,
+            () => (targetSize && { width: targetSize.width, height: targetSize.height }) || undefined,
             [targetSize]
         );
         // Resize Demand - change the state
@@ -47,8 +81,9 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
             setGraphSize((oldGraphSize) => (!oldGraphSize ? defaultContainerSize : oldGraphSize));
         }, [defaultContainerSize]);
 
-        const nodesDict = useMemo(() => keyBy(simpleNodes, (n) => n.name), [simpleNodes]);
-        const topLevelNodes = useMemo(() => simpleNodes.filter((n) => !n.parent), [simpleNodes]);
+        const defaultSimpleNodes = useDefaultNodes(simpleNodes);
+        const nodesDict = useMemo(() => keyBy(defaultSimpleNodes, (n) => n.name), [defaultSimpleNodes]);
+        const topLevelNodes = useMemo(() => defaultSimpleNodes.filter((n) => !n.parent), [defaultSimpleNodes]);
         const topLevelNodesDict = useMemo(() => keyBy(topLevelNodes, (l) => l.name), [topLevelNodes]);
 
         const [edgeNodePositions, onBubblePositions] = useBubbledPositions();
@@ -62,58 +97,52 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                 simpleEdges.map((edge) => ({
                     ...edge,
                     to: reroutedNodesDict[edge.to].name,
+                    originalTo: edge.to,
                     from: reroutedNodesDict[edge.from].name,
+                    originalFrom: edge.from,
                 })),
             [simpleEdges, reroutedNodesDict]
         );
-
-        const nodesByParent = useChildrenNodesByParent(simpleNodes);
-        const onGetSubgraph = useCallback(
-            (name: string) => {
-                return nodesByParent[name];
-            },
-            [nodesByParent]
+        const selectedEdges = useMemo(
+            () =>
+                routedEdges
+                    .filter((s) => !selectedNodes || selectedNodes.includes(s.from) || selectedNodes.includes(s.to))
+                    .map((s) => s.name),
+            [routedEdges, selectedNodes]
         );
+        const nodesByParent = useChildrenNodesByParent(defaultSimpleNodes);
+        const onGetSubgraph = useCallback((name: string) => nodesByParent[name], [nodesByParent]);
         const parentNodes = useMemo(
             () =>
-                topLevelNodes.map((node) => ({
-                    ...node,
-                    size: node.size ?? options.defaultSize,
-                    border: mix(
-                        node.backgroundColor ?? "gray",
-                        "rgba(0,0,0,0)",
-                        expanded.includes(node.name) ? 0.6 : 0.3
-                    ).css(),
-                    backgroundColor: mix(node.backgroundColor ?? "gray", "rgba(255,255,255,0)", 0.3).css(),
-                })),
-            [topLevelNodes, options.defaultSize, expanded]
+                topLevelNodes.map((node, index) => {
+                    const size = node.size ?? { width: options.defaultWidth, height: options.defaultHeight };
+                    return { ...node, size };
+                }),
+            [topLevelNodes, options.defaultWidth, options.defaultHeight]
         );
+        const localSimpleEdges = useMemo(() => {
+            if (!parentNodes) return [];
+            const subNodesDict = keyBy(parentNodes, (s) => s.name);
+            return routedEdges.filter((e) => subNodesDict[e.from] && subNodesDict[e.to]);
+        }, [parentNodes, routedEdges]);
 
+        const styles = useStyleConfig("Graph");
         return (
-            <div
-                ref={ref}
-                style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "block",
-                    overflow: "auto",
-                    backgroundColor: "#f0f0ff",
-                }}
-            >
-                <SvgContainer key="svg" textSize={options.textSize} screenSize={graphSize}>
+            <Box ref={dimensionsRef} width="100%" height="100%" overflow="auto" sx={styles}>
+                <SvgContainer key="svg" nodeMargin={options.nodeMargin} screenSize={graphSize}>
                     {graphSize && (
                         <MiniGraph
                             key="root"
-                            simpleNodes={parentNodes}
-                            simpleEdges={routedEdges}
                             name="root"
+                            simpleNodes={parentNodes}
+                            allRoutedSimpleEdges={routedEdges}
+                            localSimpleEdges={localSimpleEdges}
                             options={options}
                             onSelectNode={onSelectNode}
-                            selectedNode={selectedNode}
+                            selectedNodes={selectedNodes}
                             onGetSubgraph={onGetSubgraph}
                             onExpandToggleNode={onExpandToggleNode}
                             expanded={expanded}
-                            level={1}
                             onResizeNeeded={onResizeNeeded}
                             screenSize={graphSize}
                             screenPosition={zeroPoint}
@@ -123,12 +152,14 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                     <Edges
                         key="edges"
                         name="root"
+                        selected={selectedEdges}
                         edges={routedEdges}
                         positionDict={edgeNodePositions}
+                        nodesDict={nodesDict}
                         options={options}
                     />
                 </SvgContainer>
-            </div>
+            </Box>
         );
     }
 );

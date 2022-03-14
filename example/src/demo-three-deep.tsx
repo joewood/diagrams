@@ -1,39 +1,30 @@
 import { Box } from "@chakra-ui/react";
-import { ExpandableGraph, ExpandableGraphProps, GraphOptions } from "@diagrams/graph";
+import { ExpandableGraph, GraphOptions, useExpandToggle, useSelectNodes } from "@diagrams/graph";
 import { useDefaultOptions } from "@diagrams/graph/lib/use-ngraph";
-import { uniq } from "lodash";
 import * as React from "react";
-import { FC, useCallback, useState } from "react";
+import { FC } from "react";
 import { edges, nodesL3 } from "./data";
 
 export const DemoGraphThreeDeep: FC<{
     options: GraphOptions;
 }> = ({ options: _options }) => {
-    const [expanded, setExpanded] = useState<string[]>([]);
-    const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const options = useDefaultOptions(_options);
-
-    const onExpandToggleNode = useCallback<Required<ExpandableGraphProps>["onExpandToggleNode"]>(
-        ({ name, expand }) => setExpanded((exp) => (expand ? uniq([...exp, name]) : exp.filter((e) => e !== name))),
-        []
-    );
-    const onSelectNode = useCallback<Required<ExpandableGraphProps>["onSelectNode"]>(
-        ({ name }) => setSelectedNode(name),
-        []
-    );
-    return (
-        <Box width="100%" height="100%">
+    const nodes = nodesL3.map((node) => ({
+        ...node,
+    }))
+    const [expanded,onExpandToggleNode] = useExpandToggle(nodes);
+    const [selectedNodes, onSelectNode] = useSelectNodes(nodes);
+    
+     return (
+        <Box width="100%" height="100%" >
             <ExpandableGraph
                 key="expandable"
-                simpleNodes={nodesL3.map((node) => ({
-                    ...node,
-                    shadow: !node.parent,
-                }))}
+                simpleNodes={nodes}
                 simpleEdges={edges}
                 onExpandToggleNode={onExpandToggleNode}
                 expanded={expanded}
                 onSelectNode={onSelectNode}
-                selectedNode={selectedNode}
+                selectedNodes={selectedNodes}
                 options={options}
             />
         </Box>

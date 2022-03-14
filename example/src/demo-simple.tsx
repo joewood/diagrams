@@ -1,32 +1,30 @@
 import { Box } from "@chakra-ui/react";
-import { GraphOptions, SimpleGraph, useDefaultOptions } from "@diagrams/graph";
+import { GraphOptions, SimpleGraph, useDefaultOptions, useSelectNodes } from "@diagrams/graph";
 import * as React from "react";
-import { FC, useCallback, useMemo, useState } from "react";
+import { FC, useMemo } from "react";
 import { edges, nodesLeaf } from "./data";
 
 export const DemoGraphSimple: FC<{
     options: GraphOptions;
 }> = ({ options: _options }) => {
-    const [selected, setSelected] = useState<string | null>(null);
+
     const options = useDefaultOptions(_options);
-    const onSelect = useCallback(({ name }: { name: string }) => {
-        setSelected((prev) => (name === prev ? null : name));
-    }, []);
+    const [selectedNodes, onSelectNode] = useSelectNodes(nodesLeaf);
     const largeNodes = useMemo(
         () =>
             nodesLeaf.map((node) => ({
                 ...node,
-                size:
-                    node.name === selected
-                        ? {
-                              width: (node.size ?? options.defaultSize).width * 2,
-                              height: (node.size ?? options.defaultSize).height * 2,
-                          }
-                        : node.size,
-                border: node.name === selected ? "#000" : "#333",
+                size: selectedNodes.includes(node.name)
+                    ? {
+                          width:
+                              (node.size ?? { width: options.defaultWidth, height: options.defaultHeight }).width * 2,
+                          height:
+                              (node.size ?? { width: options.defaultWidth, height: options.defaultHeight }).height * 2,
+                      }
+                    : node.size,
                 shadow: true,
             })),
-        [options.defaultSize, selected]
+        [options.defaultHeight, options.defaultWidth, selectedNodes]
     );
     return (
         <Box width="100%" height="100%">
@@ -34,8 +32,8 @@ export const DemoGraphSimple: FC<{
                 simpleNodes={largeNodes}
                 simpleEdges={edges}
                 options={options}
-                onSelectNode={onSelect}
-                selectedNode={selected}
+                onSelectNode={onSelectNode}
+                selectedNodes={selectedNodes}
             />
             ;
         </Box>
