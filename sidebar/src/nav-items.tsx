@@ -1,5 +1,13 @@
 import { InfoOutlineIcon, PlusSquareIcon } from "@chakra-ui/icons";
-import { Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, Flex } from "@chakra-ui/react";
+import {
+    Accordion,
+    AccordionButton,
+    AccordionIcon,
+    AccordionItem,
+    AccordionPanel,
+    Flex,
+    useColorModeValue,
+} from "@chakra-ui/react";
 import { isEqual, uniq } from "lodash";
 import * as React from "react";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
@@ -59,6 +67,10 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
         },
         [setNavState]
     );
+    const hoverColor = useColorModeValue("gray.100", "gray.700");
+    const selectedBackgroundColor = useColorModeValue("gray.800", "gray.200");
+    const selectedColor = useColorModeValue("gray.100", "gray.800");
+
     return (
         <Accordion
             p={0}
@@ -72,25 +84,23 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
             {defaultedPages.map((page) => {
                 const pagePath = `${parentPath}/${page.pathPart}`;
                 return (
-                    <AccordionItem
-                        key={page.pathPart}
-                        p={0}
-                        isFocusable={false}
-                        borderColor="transparent"
-                        color={options.color}
-                    >
+                    <AccordionItem key={page.pathPart} p={0} isFocusable={false} borderColor="transparent">
                         <AccordionButton
                             padding="4px 0 0 0"
-                            bg={currentPath === pagePath ? options.highlightColor : "transparent"}
                             as={Flex}
                             fontSize={14}
                             sx={{
                                 "& > svg:first-of-type": {
                                     marginLeft: 2,
                                     flex: "0 0 auto",
-                                    color: options.color,
                                     marginRight: 2,
                                 },
+                            }}
+                            backgroundColor={currentPath === pagePath ? selectedBackgroundColor : undefined}
+                            color={currentPath === pagePath ? selectedColor : undefined}
+                            _selected={{ backgroundColor: selectedBackgroundColor, color: selectedColor }}
+                            _hover={{
+                                backgroundColor: currentPath === pagePath ? selectedBackgroundColor : hoverColor,
                             }}
                             direction="row"
                             height={options.itemHeight}
