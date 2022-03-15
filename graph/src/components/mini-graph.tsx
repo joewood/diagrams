@@ -20,10 +20,14 @@ export interface MiniGraphProps {
     allRoutedSimpleEdges: SimpleEdge[];
     screenSize: Size;
     screenPosition: Point;
-    onSelectNode?: (args: { name: string; selected: boolean }) => void;
+    onSelectNode: (args: { name: string; selected: boolean }) => void;
     onExpandToggleNode?: (args: { name: string; expand: boolean }) => void;
     expanded: string[];
-    selectedNodes?: string[] | null;
+    edgeInNodes: string[];
+    edgeOutNodes: string[];
+    onEdgeInNode: (args: { names: string[]; selected: boolean }) => void;
+    onEdgeOutNode: (args: { names: string[]; selected: boolean }) => void;
+    selectedNodes: string[] | null;
     name: string;
     onResizeNeeded: (name: string, action: ResizeNeededAction) => void;
     onBubblePositions: (nodes: ScreenRect[]) => void;
@@ -46,6 +50,10 @@ export const MiniGraph = memo<MiniGraphProps>(
         onSelectNode,
         selectedNodes,
         screenPosition,
+        edgeInNodes,
+        edgeOutNodes,
+        onEdgeInNode,
+        onEdgeOutNode,
         onResizeNeeded,
         onGetSubgraph,
         name,
@@ -116,6 +124,10 @@ export const MiniGraph = memo<MiniGraphProps>(
                         subNodes={onGetSubgraph?.(node.name)}
                         onExpandToggleNode={onExpandToggleNode}
                         isExpanded={expanded.includes(node.name)}
+                        edgeInNodes={edgeInNodes}
+                        edgeOutNodes={edgeOutNodes}
+                        onEdgeInNode={onEdgeInNode}
+                        onEdgeOutNode={onEdgeOutNode}
                         expanded={expanded}
                         onSelectNode={onSelectNode}
                         onGetSubgraph={onGetSubgraph}

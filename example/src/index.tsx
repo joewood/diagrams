@@ -1,16 +1,11 @@
 import {
-    Box,
-    Button,
-    Center,
-    ChakraProvider,
-    Flex,
-    Heading,
-    theme,
+    Box, Center,
+    ChakraProvider, theme,
     useColorMode,
-    useStyleConfig,
+    useStyleConfig
 } from "@chakra-ui/react";
 import { GraphOptions, PhysicsSettings, useGraphOptions } from "@diagrams/graph";
-import { SideBar } from "@diagrams/sidebar";
+import { SideBar, Title } from "@diagrams/sidebar";
 import * as React from "react";
 import { ElementType, FC, useMemo } from "react";
 import ReactDOM from "react-dom";
@@ -68,19 +63,17 @@ const AppA: FC = () => {
     const style = useStyleConfig("Container");
     return (
         <Box height="100vh" width="100vw" m={0} p={0} position="relative">
-            <Flex as="header" width="100%" sx={style} justifyContent="space-between" height={`${navHeight}px`}>
-                <Box flex="0 0 auto" ml={2}>
-                    <Heading size="md">@diagrams/graph</Heading>
-                </Box>
-                <Button flex="0 0 auto" onClick={toggleColorMode}>{`${
-                    colorMode === "dark" ? "Light" : "Dark"
-                } Mode`}</Button>
-            </Flex>
+            <Title title="@diagrams/graph"/>
             <Box pos="absolute" top={`${navHeight}px`} left={0} height={`calc( 100% - ${navHeight}px )`}>
                 <SideBar
                     currentPath={location.pathname}
                     sx={{ label: { fontSize: "0.8rem" } }}
                     pages={[
+                        {
+                            name: "Settings",
+                            pathPart: null,
+                            subPages: <PhysicsSettings options={options} updateOptions={setGraphOptions} />,
+                        },
                         {
                             name: "Simple Graphs",
                             pathPart: "graph",
@@ -96,9 +89,7 @@ const AppA: FC = () => {
                         drawerWidth: navWidth,
                         linkElement: RouterLink,
                     }}
-                >
-                    <PhysicsSettings options={options} updateOptions={setGraphOptions} />
-                </SideBar>
+                ></SideBar>
             </Box>
             <Box
                 as="main"

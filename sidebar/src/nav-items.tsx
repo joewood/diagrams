@@ -14,12 +14,12 @@ import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { NavItem } from "./nav-item";
 import { SideBarProps } from "./sidebar";
 
-function findIndexIntoPages(currentPath: string, parentPath: string, subPages: Page[]) {
-    if (!currentPath || !currentPath.startsWith(parentPath)) return -1;
+function findIndexIntoPages(currentPath: string, parentPath: string , subPages: Page[]) {
+    if ( !currentPath || !currentPath.startsWith(parentPath)) return -1;
     return subPages.findIndex((subPage) => currentPath.startsWith(`${parentPath}/${subPage.pathPart}`));
 }
 
-function useNavigationState(activePath: string, pages: Page[], parentPath: string) {
+function useNavigationState(activePath: string, pages: Page[], parentPath: string ) {
     const index = useMemo(() => findIndexIntoPages(activePath, parentPath, pages), [activePath, pages, parentPath]);
     const [indices, setIndices] = useState<number[]>(index < 0 ? [] : [index]);
     useEffect(() => {
@@ -33,15 +33,15 @@ function useNavigationState(activePath: string, pages: Page[], parentPath: strin
 }
 
 export interface Page {
-    subPages?: Page[];
+    subPages?: Page[] | JSX.Element;
     name: string;
-    pathPart?: string;
+    pathPart?: string | null;
     icon?: JSX.Element;
 }
 
 export interface NavItemsProps {
     currentPath: string;
-    parentPath?: string;
+    parentPath?: string ;
     pages: Page[];
     options: Required<Required<SideBarProps>["options"]>;
 }
@@ -52,9 +52,14 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
         () =>
             pages.map((p) => ({
                 name: p.name,
-                subPages: p.subPages ?? [],
-                pathPart: p.pathPart ?? encodeURIComponent(p.name.toLowerCase()),
-                icon: p.icon ?? (p.subPages?.length ?? 0) > 0 ? <PlusSquareIcon /> : <InfoOutlineIcon />,
+                subPages: !p.subPages || !Array.isArray(p.subPages) ? [] : p.subPages,
+                pathPart: p.pathPart === null ? null : p.pathPart ?? encodeURIComponent(p.name.toLowerCase()),
+                icon:
+                    p.icon ?? (!Array.isArray(p.subPages) || (p.subPages?.length ?? 0) > 0) ? (
+                        <PlusSquareIcon />
+                    ) : (
+                        <InfoOutlineIcon />
+                    ),
             })),
         [pages]
     );
@@ -70,7 +75,6 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
     const hoverColor = useColorModeValue("gray.100", "gray.700");
     const selectedBackgroundColor = useColorModeValue("gray.800", "gray.200");
     const selectedColor = useColorModeValue("gray.100", "gray.800");
-
     return (
         <Accordion
             p={0}
@@ -82,7 +86,7 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
             maxWidth={`${options.drawerWidth}px`}
         >
             {defaultedPages.map((page) => {
-                const pagePath = `${parentPath}/${page.pathPart}`;
+                const pagePath = page.pathPart === null ? "---" : `${parentPath}/${page.pathPart}`;
                 return (
                     <AccordionItem key={page.pathPart} p={0} isFocusable={false} borderColor="transparent">
                         <AccordionButton
@@ -106,17 +110,26 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
                             height={options.itemHeight}
                             alignItems="center"
                         >
-                            <NavItem link={pagePath} text={page.name} icon={page.icon} options={options} />
-                            {page.subPages.length > 0 && <AccordionIcon />}
+                            <NavItem
+                                link={pagePath === null ? "" : pagePath}
+                                text={page.name}
+                                icon={page.icon}
+                                options={options}
+                            />
+                            {page.subPages && (!Array.isArray(page.subPages) || page.subPages.length > 0) && (
+                                <AccordionIcon />
+                            )}
                         </AccordionButton>
                         <AccordionPanel p={0} pl="10px">
-                            {page.subPages.length > 0 && (
+                            {Array.isArray(page.subPages) && page.subPages.length > 0 ? (
                                 <NavItems
                                     pages={page.subPages}
                                     parentPath={pagePath}
                                     currentPath={currentPath}
                                     options={options}
                                 />
+                            ) : (
+                                page.subPages
                             )}
                         </AccordionPanel>
                     </AccordionItem>

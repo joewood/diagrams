@@ -1,8 +1,10 @@
 import { useColorModeValue } from "@chakra-ui/react";
 import { brewer, mix, scale } from "chroma-js";
-import { keyBy } from "lodash";
-import { useMemo } from "react";
+import { keyBy, uniq } from "lodash";
+import { useCallback, useMemo, useState } from "react";
+import { ExpandableGraphProps } from "../expandable-graph";
 import { SimpleNode } from "./model";
+import { useChildrenNodesByParent } from "./use-ngraph";
 
 const palette = brewer.RdYlGn;
 const paletteScale = scale(palette);
@@ -26,8 +28,7 @@ function getNodeColor(nodeDict: Record<string, SimpleNode>, node: SimpleNode, bl
     return mix(parentColor, blend, 0.2).css();
 }
 
-
-export function useDefaultNodes( simpleNodes: SimpleNode[]) {
+export function useDefaultNodes(simpleNodes: SimpleNode[]) {
     const blend = useColorModeValue("white", "black");
     return useMemo(() => {
         const numberParent = simpleNodes.filter((node) => !node.parent).length;
@@ -42,5 +43,81 @@ export function useDefaultNodes( simpleNodes: SimpleNode[]) {
             color: node.color ?? getNodeColor(nodesDict, node, blend),
         }));
     }, [blend, simpleNodes]);
+}
 
+export function getAllChildrenName(n: string, nodesByParent: Record<string, SimpleNode[]>): string[] {
+    return [n, ...(nodesByParent[n]?.flatMap((p) => getAllChildrenName(p.name, nodesByParent)) ?? [])];
+}
+
+export function getAllChildrenNames(names: string[], nodesByParent: Record<string, SimpleNode[]>): string[] {
+    return [
+        ...names,
+        ...names.flatMap(
+            (name) => nodesByParent[name]?.flatMap((node) => getAllChildrenName(node.name, nodesByParent)) ?? []
+        ),
+    ];
+}
+
+// type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode" |"";
+export function useExpandToggle(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onExpandToggleNode"]] {
+    const [expanded, setExpanded] = useState<string[]>([]);
+    const nodesByParent = useChildrenNodesByParent(nodes);
+    const onExpandToggleNode = useCallback<Required<ExpandableGraphProps>["onExpandToggleNode"]>(
+        ({ name, expand }) => {
+            setExpanded((previous) => {
+                if (expand) return uniq([...previous, name]);
+                const childrenNames = getAllChildrenName(name, nodesByParent);
+                return previous.filter((e) => !childrenNames.includes(e));
+            });
+        },
+        [nodesByParent]
+    );
+    return [expanded, onExpandToggleNode];
+}
+
+export function useSelectNodes(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onSelectNode"]] {
+    const [selectedNode, setSelectedNode] = useState<string[]>([]);
+    const nodesByParent = useChildrenNodesByParent(nodes);
+    const onSelectNode = useCallback<Required<ExpandableGraphProps>["onSelectNode"]>(
+        ({ name, selected }) => {
+            setSelectedNode((prev) => {
+                const childrenNames = getAllChildrenName(name, nodesByParent);
+                return !selected ? prev.filter((p) => !childrenNames.includes(p)) : uniq([...prev, ...childrenNames]);
+            });
+        },
+        [nodesByParent]
+    );
+    return [selectedNode, onSelectNode];
+}
+
+export function useEdgeIn(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onEdgeInNode"]] {
+    const [edgeIn, setEdgeIn] = useState<string[]>([]);
+    const nodesByParent = useChildrenNodesByParent(nodes);
+    const onEdgeInToggle = useCallback<Required<ExpandableGraphProps>["onEdgeInNode"]>(
+        ({ names, selected }) => {
+            setEdgeIn((previous) => {
+                if (selected) return uniq([...previous, ...names]);
+                const childrenNames = getAllChildrenNames(names, nodesByParent);
+                return previous.filter((e) => !childrenNames.includes(e));
+            });
+        },
+        [nodesByParent]
+    );
+    return [edgeIn, onEdgeInToggle];
+}
+
+export function useEdgeOut(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onEdgeOutNode"]] {
+    const [edgeOut, setEdgeOut] = useState<string[]>([]);
+    const nodesByParent = useChildrenNodesByParent(nodes);
+    const onEdgeInToggle = useCallback<Required<ExpandableGraphProps>["onEdgeOutNode"]>(
+        ({ names, selected }) => {
+            setEdgeOut((previous) => {
+                if (selected) return uniq([...previous, ...names]);
+                const childrenNames = getAllChildrenNames(names, nodesByParent);
+                return previous.filter((e) => !childrenNames.includes(e));
+            });
+        },
+        [nodesByParent]
+    );
+    return [edgeOut, onEdgeInToggle];
 }

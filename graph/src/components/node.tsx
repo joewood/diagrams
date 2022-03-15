@@ -3,9 +3,9 @@ import { mix } from "chroma-js";
 import { motion } from "framer-motion";
 import { keyBy } from "lodash";
 import * as React from "react";
-import { FC, useCallback, useMemo } from "react";
+import { FC, useCallback, useMemo, useState } from "react";
 import { SimpleNode } from "..";
-import {  ScreenPositionedNode, Size, transition } from "../hooks/model";
+import { ScreenPositionedNode, Size, transition } from "../hooks/model";
 import { useGraphResize } from "../hooks/use-ngraph";
 import { ExpandButton } from "../resources/expand-button";
 import { FlowButton } from "../resources/flow-button";
@@ -19,6 +19,10 @@ export interface NodeProps
         | "selectedNodes"
         | "expanded"
         | "options"
+        | "edgeInNodes"
+        | "edgeOutNodes"
+        | "onEdgeInNode"
+        | "onEdgeOutNode"
         | "onSelectNode"
         | "onExpandToggleNode"
         | "onBubblePositions"
@@ -41,6 +45,10 @@ export const Node: FC<NodeProps> = ({
     allRoutedSimpleEdges,
     expanded,
     isExpanded,
+    onEdgeInNode,
+    onEdgeOutNode,
+    edgeInNodes,
+    edgeOutNodes,
     selectedNodes,
     options,
     onSelectNode,
@@ -53,6 +61,9 @@ export const Node: FC<NodeProps> = ({
         () => onExpandToggleNode?.({ name: screenNode.name, expand: !isExpanded }),
         [isExpanded, screenNode.name, onExpandToggleNode]
     );
+    const [hover, setHover] = useState(false);
+    const onEnter = useCallback(() => setHover(true), []);
+    const onLeave = useCallback(() => setHover(false), []);
     const isSelected = selectedNodes?.includes(screenNode.name) ?? false;
 
     // request for expansion or shrink handled here, size is updated
@@ -82,17 +93,17 @@ export const Node: FC<NodeProps> = ({
         }),
         [isExpandedSubgraph, labelSize.height, screenNode.screenPosition, screenNode.size.height]
     );
-    const localSimpleEdges = useMemo( ()=> {
+    const localSimpleEdges = useMemo(() => {
         if (!subNodes) return [];
-        const subNodesDict = keyBy(subNodes ,s=>s.name);
-        return allRoutedSimpleEdges.filter( e => subNodesDict[e.from]  && subNodesDict[e.to]);
-    },[allRoutedSimpleEdges, subNodes])
+        const subNodesDict = keyBy(subNodes, (s) => s.name);
+        return allRoutedSimpleEdges.filter((e) => subNodesDict[e.from] && subNodesDict[e.to]);
+    }, [allRoutedSimpleEdges, subNodes]);
     const shadow = useColorModeValue("url(#shadow)", "url(#glow)");
     const buttonColor = useColorModeValue("#333", "#eee");
     const subdue = useColorModeValue("white", "black");
     const intensify = useColorModeValue("black", "white");
     const buttonColorBorder = mix(buttonColor, subdue, 0.5).css();
-    const borderColor = mix(screenNode.color, intensify, 0.6).css();
+    const borderColor = mix(screenNode.color, intensify, 0.4).css();
     const backgroundColor = mix(screenNode.color, subdue, 0.8).css();
     const labelColor = mix(screenNode.color, intensify, 0.995).css();
     const textBackground = isExpandedSubgraph ? mix(backgroundColor, intensify, 0.1).css() : backgroundColor;
@@ -110,20 +121,26 @@ export const Node: FC<NodeProps> = ({
                         (screenNode.initialSize ?? screenNode.size).height / 2,
                     width: (screenNode.initialSize ?? screenNode.size).width,
                     height: (screenNode.initialSize ?? screenNode.size).height,
+                    rx: options.textSize * (isExpanded ? 1.5 : 1),
+                    ry: options.textSize * (isExpanded ? 1.5 : 1),
                 }}
                 animate={{
                     x: screenNode.screenPosition.x - screenNode.size.width / 2,
                     y: screenNode.screenPosition.y - screenNode.size.height / 2,
                     width: screenNode.size.width,
                     height: screenNode.size.height,
+                    rx: options.textSize * (isExpanded ? 1.5 : 1),
+                    ry: options.textSize * (isExpanded ? 1.5 : 1),
                 }}
                 stroke={borderColor}
                 transition={transition}
                 strokeWidth={2}
                 fill={backgroundColor}
                 filter={screenNode.parent === null ? shadow : undefined}
+                style={{ pointerEvents: "all" }}
+                onMouseEnter={onEnter}
+                onMouseLeave={onLeave}
             />
-
             <TextBox
                 key={screenNode.name}
                 initialCenterPos={screenNode.initialScreenPosition ?? labelPosition}
@@ -137,17 +154,60 @@ export const Node: FC<NodeProps> = ({
                 textAnchor="middle"
                 borderThickness={0}
                 selected={isSelected}
-                curved={!isExpanded}
+                radiusTopLeft={options.textSize * (isExpanded ? 1.5 : 1)}
+                radiusTopRight={options.textSize * (isExpanded ? 1.5 : 1)}
+                radiusBottomLeft={isExpanded ? 0 : options.textSize}
+                radiusBottomRight={isExpanded ? 0 : options.textSize}
                 onSelectNode={onSelectNode}
                 textSize={options.textSize}
                 textColor={labelColor}
+            ></TextBox>
+            <motion.g
+                pointerEvents="visiblePainted"
+                initial={{
+                    x:
+                        (screenNode.initialScreenPosition ?? labelPosition).x +
+                        (screenNode.initialSize ?? labelSize).width / 2 -
+                        options.textSize * 0.6 -
+                        options.titleHeight * 0.5,
+                    y: -0.15 * options.titleHeight + (screenNode.initialScreenPosition ?? labelPosition).y,
+                }}
+                animate={{
+                    x: labelPosition.x + labelSize.width / 2 - options.textSize * 0.6 - options.titleHeight * 0.5,
+                    y: -0.15 * options.titleHeight + labelPosition.y,
+                    opacity: hover ? 1 : 0,
+                }}
+                onMouseEnter={onEnter}
+                onMouseLeave={onLeave}
             >
+                {isSubgraph && isExpanded && (
+                    <FlowButton
+                        pos={{ x: -1 * options.titleHeight * 0.5 * 1, y: 0 }}
+                        borderColor={buttonColorBorder}
+                        arrowColor={buttonColor}
+                        width={options.titleHeight * 0.4}
+                        height={options.titleHeight * 0.4}
+                        nodeNames={subNodes.map(p=>p.name)}
+                        onClick={onEdgeOutNode}
+                        enabled={!isExpanded}
+                        flowIn={false}
+                    />
+                )}
+                {isSubgraph && isExpanded && (
+                    <FlowButton
+                        pos={{ x: -1 * options.titleHeight * 0.5 * 2, y: 0 }}
+                        borderColor={buttonColorBorder}
+                        arrowColor={buttonColor}
+                        width={options.titleHeight * 0.4}
+                        height={options.titleHeight * 0.4}
+                        onClick={onEdgeInNode}
+                        nodeNames={subNodes.map(p=>p.name)}
+                        enabled={!isExpanded}
+                        flowIn={true}
+                    />
+                )}
                 {isSubgraph && (
                     <ExpandButton
-                        pos={{
-                            x: (screenNode.initialSize ?? labelSize).width / 2 - 0.5 * options.titleHeight,
-                            y: -0.3 * options.titleHeight,
-                        }}
                         borderColor={buttonColorBorder}
                         arrowColor={buttonColor}
                         width={options.titleHeight * 0.4}
@@ -156,37 +216,8 @@ export const Node: FC<NodeProps> = ({
                         expanded={!isExpanded}
                     />
                 )}
-                {isSubgraph && isExpanded && (
-                    <FlowButton
-                        pos={{
-                            x: (screenNode.initialSize ?? labelSize).width / 2 - 1.1 * options.titleHeight,
-                            y: -0.3 * options.titleHeight,
-                        }}
-                        borderColor={buttonColorBorder}
-                        arrowColor={buttonColor}
-                        width={options.titleHeight * 0.4}
-                        height={options.titleHeight * 0.4}
-                        onClick={onExpandCollapse}
-                        enabled={!isExpanded}
-                        flowIn={false}
-                    />
-                )}
-                {isSubgraph && isExpanded && (
-                    <FlowButton
-                        pos={{
-                            x: (screenNode.initialSize ?? labelSize).width / 2 - 1.7 * options.titleHeight,
-                            y: -0.3 * options.titleHeight,
-                        }}
-                        borderColor={buttonColorBorder}
-                        arrowColor={buttonColor}
-                        width={options.titleHeight * 0.4}
-                        height={options.titleHeight * 0.4}
-                        onClick={onExpandCollapse}
-                        enabled={!isExpanded}
-                        flowIn={true}
-                    />
-                )}
-            </TextBox>
+            </motion.g>
+
             {isExpandedSubgraph && (
                 <MiniGraph
                     key={screenNode.name + "-graph"}
@@ -194,6 +225,10 @@ export const Node: FC<NodeProps> = ({
                     localSimpleEdges={localSimpleEdges}
                     allRoutedSimpleEdges={allRoutedSimpleEdges}
                     name={screenNode.name}
+                    edgeInNodes={edgeInNodes}
+                    edgeOutNodes={edgeOutNodes}
+                    onEdgeInNode={onEdgeInNode}
+                    onEdgeOutNode={onEdgeOutNode}
                     onSelectNode={onSelectNode}
                     selectedNodes={selectedNodes}
                     onResizeNeeded={onResizeNeeded}

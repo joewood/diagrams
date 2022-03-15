@@ -35,24 +35,27 @@ export const SvgContainer: FC<Props> = ({ children, nodeMargin, screenSize, defs
                     <polygon points={`${0} 0, ${markerWidth} ${markerHeight / 2}, ${0} ${markerHeight}`} />
                 </marker>
                 <filter id="shadow" x="0" y="0" width="200%" height="200%">
-                    <feOffset result="offOut" in="SourceGraphic" dx={nodeMargin / 2} dy={nodeMargin / 2} />
+                    <feOffset result="offOut" in="SourceGraphic" dx={nodeMargin / 3} dy={nodeMargin / 3} />
                     <feColorMatrix
                         result="matrixOut"
                         in="offOut"
                         type="matrix"
-                        values="0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0"
+                        values={`0.2 0 0 0 0
+                                 0 0.2 0 0 0 
+                                 0 0 0.2 0 0 
+                                 0 0 0   1 0`}
                     />
-                    <feGaussianBlur result="blurOut" in="matrixOut" stdDeviation={nodeMargin / 2} />
+                    <feGaussianBlur result="blurOut" in="matrixOut" stdDeviation={nodeMargin / 3} />
                     <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
                 </filter>
                 <filter id="glow" primitiveUnits="userSpaceOnUse">
-                    <feGaussianBlur stdDeviation="5" in="SourceGraphic" />
+                    <feGaussianBlur stdDeviation="3" in="SourceGraphic" />
                     <feColorMatrix
                         type="matrix"
-                        values={`0 0 0 0 .9 
-                                0 0 0 0 .9 
-                                0 0 0 0 .9 
-                                0 0 0 1 0`}
+                        values={`0.5 0 0 0 .6 
+                                 0 0.5 0 0 .6 
+                                 0 0 0.5 0 .6 
+                                 0 0 0 1 0`}
                     />
                     <feComposite operator="over" in="SourceGraphic" />
                 </filter>

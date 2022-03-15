@@ -16,11 +16,14 @@ interface Props {
     textColor?: string;
     textSize?: number | string;
     text?: string;
+    radiusTopLeft?: number;
+    radiusTopRight?: number;
+    radiusBottomRight?: number;
+    radiusBottomLeft?: number;
     verticalAnchor?: "start" | "end" | "middle";
     textAnchor?: "start" | "middle" | "end" | "inherit";
     filter?: string;
     selected?: boolean;
-    curved?: boolean;
     onSelectNode?: (args: { name: string; selected: boolean }) => void;
 }
 
@@ -38,7 +41,10 @@ export const TextBox: FC<Props> = ({
     verticalAnchor = "middle",
     textSize,
     text,
-    curved,
+    radiusTopRight,
+    radiusTopLeft,
+    radiusBottomRight,
+    radiusBottomLeft,
     filter,
     onSelectNode,
     selected,
@@ -54,47 +60,60 @@ export const TextBox: FC<Props> = ({
             <motion.g
                 key={name}
                 layoutId={name}
+                style={{ pointerEvents: "none" }}
                 initial={{
                     opacity: 0,
-                    // width: initialSizeDefaulted.width,
-                    // height: initialSizeDefaulted.height,
-                    x: initialCenterPos.x, //- initialSize.width / 2,
-                    y: initialCenterPos.y, //- initialSize.height / 2,
+                    x: initialCenterPos.x,
+                    y: initialCenterPos.y,
                     fill: fillColor,
                     stroke: borderColor,
                 }}
                 animate={{
                     opacity: 1,
-                    x: centerPos.x, //- size.width / 2,
-                    y: centerPos.y, //- size.height / 2,
+                    x: centerPos.x,
+                    y: centerPos.y,
                     fill: fillColor,
                     stroke: borderColor,
                 }}
                 transition={transition}
             >
-                <motion.rect
+                <motion.path
                     layoutId={name + "-rect"}
                     initial={{
                         opacity: 0,
-                        width: initialSize.width,
-                        height: initialSize.height,
-                        x: (-1 * initialSize.width) / 2,
-                        y: (-1 * initialSize.height) / 2,
+                        d: `
+                            M${-0.5 * initialSize.width + (radiusTopLeft ?? 0)},${-0.5 * initialSize.height}
+                            h${initialSize.width - (radiusTopRight ?? 0) - (radiusTopLeft ?? 0)}
+                            q${radiusTopRight ?? 0},0 ${radiusTopRight ?? 0},${radiusTopRight ?? 0}
+                            v${initialSize.height - (radiusTopRight ?? 0) - (radiusBottomRight ?? 0)}
+                            q0,${radiusBottomRight ?? 0} ${-1 * (radiusBottomRight ?? 0)},${radiusBottomRight ?? 0}
+                            h${-1 * initialSize.width + (radiusBottomRight ?? 0) + (radiusBottomLeft ?? 0)}
+                            q${-1 * (radiusBottomLeft ?? 0)},0 ${-1 * (radiusBottomLeft ?? 0)},${
+                            -1 * (radiusBottomLeft ?? 0)
+                        }
+                            v${-1 * initialSize.height + (radiusTopLeft ?? 0) + (radiusBottomLeft ?? 0)}
+                            q0,${-1 * (radiusTopLeft ?? 0)} ${radiusTopLeft ?? 0},${-1 * (radiusTopLeft ?? 0)}
+                            z  `,
                         fill: fillColor,
                         stroke: borderColor,
-                        rx: !curved ? 0 : initialSize.width / 20,
-                        ry: !curved ? 0 : initialSize.height / 20,
                     }}
                     animate={{
                         opacity: 1,
-                        width: size.width,
-                        height: size.height,
-                        x: (-1 * size.width) / 2,
-                        y: (-1 * size.height) / 2,
+                        d: `
+                            M${-0.5 * size.width + (radiusTopLeft ?? 0)},${-0.5 * size.height}
+                            h${size.width - (radiusTopRight ?? 0) - (radiusTopLeft ?? 0)}
+                            q${radiusTopRight ?? 0},0 ${radiusTopRight ?? 0},${radiusTopRight ?? 0}
+                            v${size.height - (radiusTopRight ?? 0) - (radiusBottomRight ?? 0)}
+                            q0,${radiusBottomRight ?? 0} ${-1 * (radiusBottomRight ?? 0)},${radiusBottomRight ?? 0}
+                            h${-1 * size.width + (radiusBottomRight ?? 0) + (radiusBottomLeft ?? 0)}
+                            q${-1 * (radiusBottomLeft ?? 0)},0 ${-1 * (radiusBottomLeft ?? 0)},${
+                            -1 * (radiusBottomLeft ?? 0)
+                        }
+                            v${-1 * size.height + (radiusTopLeft ?? 0) + (radiusBottomLeft ?? 0)}
+                            q0,${-1 * (radiusTopLeft ?? 0)} ${radiusTopLeft ?? 0},${-1 * (radiusTopLeft ?? 0)}
+                            z  `,
                         fill: fillColor,
                         stroke: borderColor,
-                        rx: !curved ? 0 : size.width / 20,
-                        ry: !curved ? 0 : size.height / 20,
                     }}
                     transition={transition}
                     fill={fillColor}
@@ -102,6 +121,7 @@ export const TextBox: FC<Props> = ({
                     stroke={borderColor}
                     strokeWidth={borderThickness}
                     onClick={onClick}
+                    style={{ pointerEvents: "none" }}
                 />
                 <Text
                     style={{ fill: textColor, strokeWidth: 0, userSelect: "none" }}

@@ -1,17 +1,17 @@
 import { Box } from "@chakra-ui/react";
 import {
     ExpandableGraph,
-    ExpandableGraphProps,
     GraphOptions,
     SimpleEdge,
     SimpleNode,
+    useEdgeIn,
+    useEdgeOut,
     useDefaultOptions,
     useExpandToggle,
     useSelectNodes,
 } from "@diagrams/graph";
-import { uniq } from "lodash";
 import * as React from "react";
-import { FC, useCallback, useState } from "react";
+import { FC } from "react";
 
 const nodesBasic: SimpleNode[] = [
     {
@@ -43,6 +43,9 @@ export const DemoGraphTwoDeepBasic: FC<{
 }> = ({ options: _options }) => {
     const [expanded, setExpanded] = useExpandToggle(nodesBasic);
     const [selectedNode, setSelectedNode] = useSelectNodes(nodesBasic);
+    const [edgeIn, onEdgeIn] = useEdgeIn(nodesBasic);
+    const [edgeOut, onEdgeOut] = useEdgeOut(nodesBasic);
+
     const options = useDefaultOptions(_options);
     return (
         <Box width="100%" height="100%">
@@ -50,6 +53,10 @@ export const DemoGraphTwoDeepBasic: FC<{
                 key="expandable"
                 simpleNodes={nodesBasic}
                 simpleEdges={edges2}
+                edgeInNodes={edgeIn}
+                edgeOutNodes={edgeOut}
+                onEdgeInNode={onEdgeIn}
+                onEdgeOutNode={onEdgeOut}
                 onExpandToggleNode={setExpanded}
                 expanded={expanded}
                 onSelectNode={setSelectedNode}

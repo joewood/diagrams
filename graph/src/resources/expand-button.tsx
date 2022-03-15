@@ -1,10 +1,12 @@
 import { Point } from "framer-motion";
+import { svgElements } from "framer-motion/types/render/svg/supported-elements";
 import * as React from "react";
-import { memo, useCallback, useState } from "react";
+import { memo, MouseEventHandler, useCallback, useState } from "react";
+import { zeroPoint } from "../hooks/model";
 import { Arrow } from "./shapes";
 
 interface ExpandButtonProps {
-    pos: Point;
+    pos?: Point;
     width: number;
     height: number;
     borderColor: string;
@@ -14,16 +16,20 @@ interface ExpandButtonProps {
 }
 
 export const ExpandButton = memo<ExpandButtonProps>(
-    ({ pos, borderColor, arrowColor, width, height, expanded, onClick }) => {
+    ({ pos = zeroPoint, borderColor, arrowColor, width, height, expanded, onClick }) => {
         const [over, setOver] = useState(false);
-        const onMouseEnter = useCallback(() => setOver(true), []);
-        const onMouseLeave = useCallback(() => setOver(false), []);
+        const onMouseEnter = useCallback<MouseEventHandler<SVGElement>>(() => {
+            setOver(true);
+        }, []);
+        const onMouseLeave = useCallback<MouseEventHandler<SVGElement>>(() => {
+            setOver(false);
+        }, []);
         return (
             <g
                 transform={`translate(${pos.x} ${pos.y}),scale(${width / 100} ${height / 100})`}
                 width={width}
                 height={height}
-                style={{ pointerEvents: "all", color: arrowColor }}
+                style={{ pointerEvents: "inherit", color: arrowColor }}
                 onMouseLeave={onMouseLeave}
                 onMouseEnter={onMouseEnter}
                 onClick={onClick}

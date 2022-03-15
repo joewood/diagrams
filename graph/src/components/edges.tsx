@@ -55,9 +55,8 @@ export const Edges = memo<Props>(({ edges, positionDict, nodesDict, selected, op
         <>
             {layoutEdges.map((edge) => {
                 if (!edge) return null;
-                if (!selected?.includes(edge.name)) return null;
-                const labelColor = mix(edge.color!, intensify, 0.8).css();
                 const edgeColor = mix(nodesDict[edge.from]?.color ?? "white", blend, 0.2).css();
+                const labelColor = mix(edgeColor, intensify, 0.8).css();
                 const {
                     thickness,
                     points: { toArrowStem, toAnchor, fromAnchor, fromNormal, toNormal, directionX, directionY },

@@ -1,54 +1,27 @@
-import { Box, useColorModeValue, useStyleConfig } from "@chakra-ui/react";
-import { brewer, mix, scale } from "chroma-js";
-import { keyBy, mapValues, uniq } from "lodash";
+import { Box, useStyleConfig } from "@chakra-ui/react";
+import { keyBy, mapValues } from "lodash";
 import * as React from "react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Edges } from "./components/edges";
 import { MiniGraph, MiniGraphProps } from "./components/mini-graph";
 import { SvgContainer } from "./components/svg-container";
 import { getVisibleNode, useDefaultNodes } from "./hooks/dynamic-nodes";
-import { GraphOptions, SimpleEdge, SimpleNode, Size, zeroPoint } from "./hooks/model";
+import { GraphOptions, SimpleEdge, Size, zeroPoint } from "./hooks/model";
 import { useBubbledPositions, useChildrenNodesByParent, useDefaultOptions } from "./hooks/use-ngraph";
 import { useDimensions } from "./use-dimensions";
 
-export function getAllChildrenName(n: string, nodesByParent: Record<string, SimpleNode[]>): string[] {
-    return [n, ...(nodesByParent[n]?.flatMap((p) => getAllChildrenName(p.name, nodesByParent)) ?? [])];
-}
-
-// type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode" |"";
-export function useExpandToggle(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onExpandToggleNode"]] {
-    const [expanded, setExpanded] = useState<string[]>([]);
-    const nodesByParent = useChildrenNodesByParent(nodes);
-    const onExpandToggleNode = useCallback<Required<ExpandableGraphProps>["onExpandToggleNode"]>(
-        ({ name, expand }) => {
-            setExpanded((previous) => {
-                if (expand) return uniq([...previous, name]);
-                const childrenNames = getAllChildrenName(name, nodesByParent);
-                return previous.filter((e) => !childrenNames.includes(e));
-            });
-        },
-        [nodesByParent]
-    );
-    return [expanded, onExpandToggleNode];
-}
-
-export function useSelectNodes(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onSelectNode"]] {
-    const [selectedNode, setSelectedNode] = useState<string[]>([]);
-    const nodesByParent = useChildrenNodesByParent(nodes);
-    const onSelectNode = useCallback<Required<ExpandableGraphProps>["onSelectNode"]>(
-        ({ name, selected }) => {
-            setSelectedNode((prev) => {
-                const childrenNames = getAllChildrenName(name, nodesByParent);
-                return !selected ? prev.filter((p) => !childrenNames.includes(p)) : uniq([...prev, ...childrenNames]);
-            });
-        },
-        [nodesByParent]
-    );
-    return [selectedNode, onSelectNode];
-}
-
 export interface ExpandableGraphProps
-    extends Pick<MiniGraphProps, "onSelectNode" | "selectedNodes" | "simpleNodes" | "onExpandToggleNode"> {
+    extends Pick<
+        MiniGraphProps,
+        | "onSelectNode"
+        | "selectedNodes"
+        | "simpleNodes"
+        | "edgeInNodes"
+        | "edgeOutNodes"
+        | "onEdgeInNode"
+        | "onEdgeOutNode"
+        | "onExpandToggleNode"
+    > {
     simpleEdges: SimpleEdge[];
     expanded: string[];
     options?: GraphOptions;
@@ -59,6 +32,10 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         simpleEdges,
         simpleNodes,
         onSelectNode,
+        edgeInNodes,
+        edgeOutNodes,
+        onEdgeInNode,
+        onEdgeOutNode,
         selectedNodes,
         onExpandToggleNode,
         expanded,
@@ -110,6 +87,10 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                     .map((s) => s.name),
             [routedEdges, selectedNodes]
         );
+        const filteredEdges = useMemo(
+            () => routedEdges.filter((e) => edgeInNodes.includes(e.to) || edgeOutNodes.includes(e.from)),
+            [edgeInNodes, edgeOutNodes, routedEdges]
+        );
         const nodesByParent = useChildrenNodesByParent(defaultSimpleNodes);
         const onGetSubgraph = useCallback((name: string) => nodesByParent[name], [nodesByParent]);
         const parentNodes = useMemo(
@@ -140,6 +121,10 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                             options={options}
                             onSelectNode={onSelectNode}
                             selectedNodes={selectedNodes}
+                            edgeInNodes={edgeInNodes}
+                            edgeOutNodes={edgeOutNodes}
+                            onEdgeInNode={onEdgeInNode}
+                            onEdgeOutNode={onEdgeOutNode}
                             onGetSubgraph={onGetSubgraph}
                             onExpandToggleNode={onExpandToggleNode}
                             expanded={expanded}
@@ -153,7 +138,7 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                         key="edges"
                         name="root"
                         selected={selectedEdges}
-                        edges={routedEdges}
+                        edges={filteredEdges}
                         positionDict={edgeNodePositions}
                         nodesDict={nodesDict}
                         options={options}
