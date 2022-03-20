@@ -1,11 +1,7 @@
-import {
-    Box, Center,
-    ChakraProvider, theme,
-    useColorMode,
-    useStyleConfig
-} from "@chakra-ui/react";
+import { Box, Center, ChakraProvider, theme, useColorMode, useColorModeValue, useStyleConfig } from "@chakra-ui/react";
 import { GraphOptions, PhysicsSettings, useGraphOptions } from "@diagrams/graph";
 import { SideBar, Title } from "@diagrams/sidebar";
+import { kebabCase } from "lodash";
 import * as React from "react";
 import { ElementType, FC, useMemo } from "react";
 import ReactDOM from "react-dom";
@@ -15,6 +11,7 @@ import { DemoGraphSimpleBusy } from "./demo-simple-busy";
 import { DemoGraphThreeDeep } from "./demo-three-deep";
 import { DemoGraphTwoDeep } from "./demo-two-deep";
 import { DemoGraphTwoDeepBasic } from "./demo-two-deep-basic";
+import { DemoLarge } from "./demo-large";
 
 const Hello: FC = () => (
     <Center height="100%">
@@ -41,7 +38,7 @@ function useDemo(options: GraphOptions, Demo: ElementType<{ options: GraphOption
         () => ({
             name,
             component: <Demo options={options} />,
-            pathPart: encodeURIComponent(name),
+            // pathPart: encodeURIComponent(name),
         }),
         [Demo, name, options]
     );
@@ -58,12 +55,14 @@ const AppA: FC = () => {
         useDemo(options, DemoGraphTwoDeepBasic, "Two Deep Basic"),
         useDemo(options, DemoGraphTwoDeep, "Two Deep"),
         useDemo(options, DemoGraphThreeDeep, "Three Deep"),
+        useDemo(options, DemoLarge, "Large Graph"),
     ];
     const { colorMode, toggleColorMode } = useColorMode();
+    const pageColor = useColorModeValue("#f0f0f4", "#101014");
     const style = useStyleConfig("Container");
     return (
         <Box height="100vh" width="100vw" m={0} p={0} position="relative">
-            <Title title="@diagrams/graph"/>
+            <Title title="@diagrams/graph" />
             <Box pos="absolute" top={`${navHeight}px`} left={0} height={`calc( 100% - ${navHeight}px )`}>
                 <SideBar
                     currentPath={location.pathname}
@@ -96,15 +95,16 @@ const AppA: FC = () => {
                 position="absolute"
                 left={`${navWidth}px`}
                 top={`${navHeight}px`}
+                background={pageColor}
                 width={`calc( 100vw - ${navWidth}px )`}
                 height={`calc( 100vh - ${navHeight}px )`}
             >
                 <Routes>
                     {simpleGraphs.map((d) => (
-                        <Route key={d.pathPart} path={"/graph/" + d.pathPart} element={d.component} />
+                        <Route key={d.name} path={"/graph/" + kebabCase(d.name)} element={d.component} />
                     ))}
                     {expandableGraphs.map((d) => (
-                        <Route key={d.pathPart} path={"/expandable/" + d.pathPart} element={d.component} />
+                        <Route key={d.name} path={"/expandable/" + kebabCase(d.name)} element={d.component} />
                     ))}
 
                     <Route path="/" element={<Hello />} />

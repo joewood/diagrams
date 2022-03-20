@@ -15,7 +15,7 @@ const Network = [
     "Load Balancing",
 ];
 
-const Compute = ["Physical Compute", "Virtual Compute & Containers", "Compute on Demand"];
+const Compute = ["Physical Compute", "Virtual Compute and Containers", "Compute on Demand","Very long description of something that needs growing"];
 
 const Data = ["Database", "Distributed Cache", "Data Warehouse"];
 
@@ -60,9 +60,9 @@ function branchToNodeArray(tree: Tree | string[] | null, branchName?: string, pa
 }
 
 export const edges: SimpleEdge[] = [
-    { from: "Compute on Demand", to: "Virtual Compute & Containers", label: "Comp Uses VMs" },
-    { from: "Virtual Compute & Containers", to: "Physical Compute", label: "VMs on HyperVisor" },
-    { from: "Database", to: "Virtual Compute & Containers", label: "DBs on VMs" },
+    { from: "Compute on Demand", to: "Virtual Compute and Containers", label: "Comp Uses VMs" },
+    { from: "Virtual Compute and Containers", to: "Physical Compute", label: "VMs on HyperVisor" },
+    { from: "Database", to: "Virtual Compute and Containers", label: "DBs on VMs" },
     { from: "Database", to: "Load Balancing", label: "DB Scale using LB" },
 ].map((e) => ({ ...e, name: `${e.from} -> ${e.to}` }));
 const connectedNodes = edges.reduce<string[]>((p, c) => [...p, c.from, c.to], []);

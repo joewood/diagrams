@@ -8,7 +8,7 @@ import {
     Flex,
     useColorModeValue,
 } from "@chakra-ui/react";
-import { isEqual, uniq } from "lodash";
+import { isEqual, kebabCase, uniq } from "lodash";
 import * as React from "react";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { NavItem } from "./nav-item";
@@ -19,8 +19,8 @@ function findIndexIntoPages(currentPath: string, parentPath: string , subPages: 
     return subPages.findIndex((subPage) => currentPath.startsWith(`${parentPath}/${subPage.pathPart}`));
 }
 
-function useNavigationState(activePath: string, pages: Page[], parentPath: string ) {
-    const index = useMemo(() => findIndexIntoPages(activePath, parentPath, pages), [activePath, pages, parentPath]);
+function useNavigationState(currentPath: string, pages: Page[], parentPath: string ) {
+    const index = useMemo(() => findIndexIntoPages(currentPath, parentPath, pages), [currentPath, pages, parentPath]);
     const [indices, setIndices] = useState<number[]>(index < 0 ? [] : [index]);
     useEffect(() => {
         if (index >= 0)
@@ -47,13 +47,14 @@ export interface NavItemsProps {
 }
 
 export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "", options }) => {
+    console.log("CURR",currentPath)
     const [navState, setNavState] = useNavigationState(currentPath, pages, parentPath);
     const defaultedPages = useMemo(
         () =>
             pages.map((p) => ({
                 name: p.name,
                 subPages: !p.subPages || !Array.isArray(p.subPages) ? [] : p.subPages,
-                pathPart: p.pathPart === null ? null : p.pathPart ?? encodeURIComponent(p.name.toLowerCase()),
+                pathPart: p.pathPart === null ? null : p.pathPart ?? kebabCase(p.name),
                 icon:
                     p.icon ?? (!Array.isArray(p.subPages) || (p.subPages?.length ?? 0) > 0) ? (
                         <PlusSquareIcon />

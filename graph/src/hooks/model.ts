@@ -1,5 +1,5 @@
 import { Body, Layout as NLayout, PhysicsSettings } from "ngraph.forcelayout";
-import { Graph, Link } from "ngraph.graph";
+import { Graph } from "ngraph.graph";
 
 export interface Size {
     width: number;

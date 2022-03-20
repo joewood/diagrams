@@ -1,10 +1,12 @@
 import { useColorModeValue } from "@chakra-ui/react";
+import { useText } from "@visx/text";
 import { mix } from "chroma-js";
 import { motion } from "framer-motion";
-import { keyBy } from "lodash";
+import { each, every, keyBy, some } from "lodash";
 import * as React from "react";
-import { FC, useCallback, useMemo, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { SimpleNode } from "..";
+import { getAllChildNodes, useHover } from "../hooks/dynamic-nodes";
 import { ScreenPositionedNode, Size, transition } from "../hooks/model";
 import { useGraphResize } from "../hooks/use-ngraph";
 import { ExpandButton } from "../resources/expand-button";
@@ -61,9 +63,7 @@ export const Node: FC<NodeProps> = ({
         () => onExpandToggleNode?.({ name: screenNode.name, expand: !isExpanded }),
         [isExpanded, screenNode.name, onExpandToggleNode]
     );
-    const [hover, setHover] = useState(false);
-    const onEnter = useCallback(() => setHover(true), []);
-    const onLeave = useCallback(() => setHover(false), []);
+    // const [hover, mouseEvents] = useHover();
     const isSelected = selectedNodes?.includes(screenNode.name) ?? false;
 
     // request for expansion or shrink handled here, size is updated
@@ -98,11 +98,48 @@ export const Node: FC<NodeProps> = ({
         const subNodesDict = keyBy(subNodes, (s) => s.name);
         return allRoutedSimpleEdges.filter((e) => subNodesDict[e.from] && subNodesDict[e.to]);
     }, [allRoutedSimpleEdges, subNodes]);
+
+    const textProps = useText({
+        children: screenNode.name ?? screenNode.name,
+        textAnchor: "middle",
+        verticalAnchor: "middle",
+        x: 0,
+        y: 0,
+        width: screenNode.size.width,
+        height: screenNode.size.height,
+        fontSize: options.textSize,
+        fontWeight: "bold",
+    });
+    useEffect(() => {
+        const estimatedSize = (textProps.wordsByLines.length + 1) * options.textSize;
+        if (estimatedSize > screenNode.size.height) {
+            onResizeNeeded(screenNode.name, {
+                suggestedSize: {
+                    ...screenNode.size,
+                    height: estimatedSize * 1.1,
+                },
+            });
+        }
+    }, [onResizeNeeded, options.textSize, screenNode.name, screenNode.size, textProps.wordsByLines.length]);
+
+    const allChildNodes = useMemo(
+        () => getAllChildNodes(onGetSubgraph, screenNode.name),
+        [onGetSubgraph, screenNode.name]
+    );
+    const isFlowIn = useMemo(() => {
+        const k = keyBy(edgeInNodes ?? [], (e) => e);
+        return every(allChildNodes, (s) => k[s.name]);
+    }, [edgeInNodes, allChildNodes]);
+    const isFlowOut = useMemo(() => {
+        const k = keyBy(edgeOutNodes ?? [], (e) => e);
+        return every(allChildNodes, (s) => k[s.name]);
+    }, [edgeOutNodes, allChildNodes]);
+
     const shadow = useColorModeValue("url(#shadow)", "url(#glow)");
-    const buttonColor = useColorModeValue("#333", "#eee");
     const subdue = useColorModeValue("white", "black");
     const intensify = useColorModeValue("black", "white");
-    const buttonColorBorder = mix(buttonColor, subdue, 0.5).css();
+    const buttonColor = mix(screenNode.color, intensify, 0.3).css();
+    const buttonColorBright = mix(buttonColor, intensify, 1).css();
     const borderColor = mix(screenNode.color, intensify, 0.4).css();
     const backgroundColor = mix(screenNode.color, subdue, 0.8).css();
     const labelColor = mix(screenNode.color, intensify, 0.995).css();
@@ -138,8 +175,6 @@ export const Node: FC<NodeProps> = ({
                 fill={backgroundColor}
                 filter={screenNode.parent === null ? shadow : undefined}
                 style={{ pointerEvents: "all" }}
-                onMouseEnter={onEnter}
-                onMouseLeave={onLeave}
             />
             <TextBox
                 key={screenNode.name}
@@ -166,57 +201,64 @@ export const Node: FC<NodeProps> = ({
                 pointerEvents="visiblePainted"
                 initial={{
                     x:
-                        (screenNode.initialScreenPosition ?? labelPosition).x +
-                        (screenNode.initialSize ?? labelSize).width / 2 -
-                        options.textSize * 0.6 -
+                        (screenNode.initialScreenPosition ?? labelPosition).x -
+                        (screenNode.initialSize ?? labelSize).width / 2 +
+                        options.textSize * 0.6 +
                         options.titleHeight * 0.5,
-                    y: -0.15 * options.titleHeight + (screenNode.initialScreenPosition ?? labelPosition).y,
+                    y: -0.2 * options.titleHeight + (screenNode.initialScreenPosition ?? labelPosition).y,
                 }}
                 animate={{
-                    x: labelPosition.x + labelSize.width / 2 - options.textSize * 0.6 - options.titleHeight * 0.5,
-                    y: -0.15 * options.titleHeight + labelPosition.y,
-                    opacity: hover ? 1 : 0,
+                    x: labelPosition.x - labelSize.width / 2 + options.textSize * 2.6 + options.titleHeight * 0.5,
+                    y: -0.2 * options.titleHeight + labelPosition.y,
+                    opacity: 1,
                 }}
-                onMouseEnter={onEnter}
-                onMouseLeave={onLeave}
             >
                 {isSubgraph && isExpanded && (
                     <FlowButton
-                        pos={{ x: -1 * options.titleHeight * 0.5 * 1, y: 0 }}
-                        borderColor={buttonColorBorder}
+                        pos={{ x: -0.4 * options.titleHeight, y: 0 }}
                         arrowColor={buttonColor}
+                        highlightColor={buttonColorBright}
+                        inverseColor={textBackground}
                         width={options.titleHeight * 0.4}
                         height={options.titleHeight * 0.4}
-                        nodeNames={subNodes.map(p=>p.name)}
+                        nodeNames={allChildNodes.map((p) => p.name)}
                         onClick={onEdgeOutNode}
-                        enabled={!isExpanded}
+                        enabled={isFlowOut}
                         flowIn={false}
                     />
                 )}
                 {isSubgraph && isExpanded && (
                     <FlowButton
-                        pos={{ x: -1 * options.titleHeight * 0.5 * 2, y: 0 }}
-                        borderColor={buttonColorBorder}
+                        pos={{ x: -1 * options.titleHeight, y: 0 }}
+                        highlightColor={buttonColorBright}
+                        inverseColor={textBackground}
                         arrowColor={buttonColor}
                         width={options.titleHeight * 0.4}
                         height={options.titleHeight * 0.4}
                         onClick={onEdgeInNode}
-                        nodeNames={subNodes.map(p=>p.name)}
-                        enabled={!isExpanded}
+                        nodeNames={allChildNodes.map((p) => p.name)}
+                        enabled={isFlowIn}
                         flowIn={true}
                     />
                 )}
-                {isSubgraph && (
-                    <ExpandButton
-                        borderColor={buttonColorBorder}
-                        arrowColor={buttonColor}
-                        width={options.titleHeight * 0.4}
-                        height={options.titleHeight * 0.4}
-                        onClick={onExpandCollapse}
-                        expanded={!isExpanded}
-                    />
-                )}
             </motion.g>
+            {isSubgraph && (
+                <ExpandButton
+                    pos={{
+                        x:
+                            (screenNode.initialScreenPosition ?? labelPosition).x +
+                            (screenNode.initialSize ?? labelSize).width / 2 -
+                            options.textSize * 1.5,
+                        y: -0.2 * options.titleHeight + (screenNode.initialScreenPosition ?? labelPosition).y,
+                    }}
+                    arrowColor={buttonColor}
+                    highlightColor={buttonColorBright}
+                    width={options.titleHeight * 0.4}
+                    height={options.titleHeight * 0.4}
+                    onClick={onExpandCollapse}
+                    expanded={!isExpanded}
+                />
+            )}
 
             {isExpandedSubgraph && (
                 <MiniGraph

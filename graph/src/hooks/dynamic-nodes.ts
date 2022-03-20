@@ -1,7 +1,9 @@
 import { useColorModeValue } from "@chakra-ui/react";
 import { brewer, mix, scale } from "chroma-js";
+import { SVGMotionProps } from "framer-motion";
 import { keyBy, uniq } from "lodash";
 import { useCallback, useMemo, useState } from "react";
+import { MiniGraphProps } from "..";
 import { ExpandableGraphProps } from "../expandable-graph";
 import { SimpleNode } from "./model";
 import { useChildrenNodesByParent } from "./use-ngraph";
@@ -120,4 +122,34 @@ export function useEdgeOut(nodes: SimpleNode[]): [string[], Required<ExpandableG
         [nodesByParent]
     );
     return [edgeOut, onEdgeInToggle];
+}
+
+export function useHoverMotion<T extends SVGElement = SVGGElement>(): [
+    boolean,
+    {
+        onMouseEnter: SVGMotionProps<T>["onMouseEnter"];
+        onMouseLeave: SVGMotionProps<T>["onMouseLeave"];
+    }
+] {
+    const [hover, setHover] = useState(false);
+    const onMouseEnter = useCallback(() => setHover(true), []);
+    const onMouseLeave = useCallback(() => setHover(false), []);
+    return [hover, { onMouseEnter, onMouseLeave }];
+}
+
+export function useHover<T extends SVGElement = SVGGElement>(): [
+    boolean,
+    {
+        onmouseenter: T["onmouseenter"];
+        onmouseleave: T["onmouseleave"];
+    }
+] {
+    const [hover, setHover] = useState(false);
+    const onMouseEnter = useCallback(() => setHover(true), []);
+    const onMouseLeave = useCallback(() => setHover(false), []);
+    return [hover, { onmouseenter: onMouseEnter, onmouseleave: onMouseLeave }];
+}
+
+export function getAllChildNodes(onGetSubGraph: MiniGraphProps["onGetSubgraph"], nodeName: string): SimpleNode[] {
+    return [...(onGetSubGraph?.(nodeName)?.flatMap((n) => [n, ...getAllChildNodes(onGetSubGraph, n.name)]) ?? [])];
 }

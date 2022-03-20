@@ -23,7 +23,7 @@ export const Arrow: FC<{ start: Point; end: Point; arrowWidth?: number }> = ({
                         `}
                 fill="currentColor"
             />
-            <line x1={stemX} y1={stemY} x2={start.x} y2={start.y} stroke="currentColor" strokeWidth={8} />
+            <line x1={stemX} y1={stemY} x2={start.x} y2={start.y} stroke="currentColor" strokeWidth={arrowWidth/3} />
         </>
     );
 };

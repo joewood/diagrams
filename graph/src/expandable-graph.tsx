@@ -88,7 +88,10 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
             [routedEdges, selectedNodes]
         );
         const filteredEdges = useMemo(
-            () => routedEdges.filter((e) => edgeInNodes.includes(e.to) || edgeOutNodes.includes(e.from)),
+            () =>
+                !edgeInNodes || !edgeInNodes
+                    ? routedEdges
+                    : routedEdges.filter((e) => edgeInNodes?.includes(e.to) || edgeOutNodes?.includes(e.from)),
             [edgeInNodes, edgeOutNodes, routedEdges]
         );
         const nodesByParent = useChildrenNodesByParent(defaultSimpleNodes);

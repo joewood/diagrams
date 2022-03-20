@@ -69,6 +69,7 @@ export function useScreenNodesByScale(
             return {
                 ...node,
                 screenPosition,
+                color:"",
                 parentScreenPosition: targetPosition,
                 size: sizeOverrides[node.name] ?? node.size,
             };

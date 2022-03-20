@@ -23,10 +23,10 @@ export interface MiniGraphProps {
     onSelectNode: (args: { name: string; selected: boolean }) => void;
     onExpandToggleNode?: (args: { name: string; expand: boolean }) => void;
     expanded: string[];
-    edgeInNodes: string[];
-    edgeOutNodes: string[];
-    onEdgeInNode: (args: { names: string[]; selected: boolean }) => void;
-    onEdgeOutNode: (args: { names: string[]; selected: boolean }) => void;
+    edgeInNodes?: string[];
+    edgeOutNodes?: string[];
+    onEdgeInNode?: (args: { names: string[]; selected: boolean }) => void;
+    onEdgeOutNode?: (args: { names: string[]; selected: boolean }) => void;
     selectedNodes: string[] | null;
     name: string;
     onResizeNeeded: (name: string, action: ResizeNeededAction) => void;

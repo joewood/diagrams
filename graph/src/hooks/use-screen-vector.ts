@@ -1,5 +1,4 @@
 import { useColorModeValue } from "@chakra-ui/react";
-import { mix } from "chroma-js";
 import { useMemo } from "react";
 import { Point, PositionedNode, ScreenPositionedNode, Size } from "./model";
 import { rectanglesOverlapSize } from "./use-overlap";
