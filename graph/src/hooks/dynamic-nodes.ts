@@ -2,7 +2,7 @@ import { useColorModeValue } from "@chakra-ui/react";
 import { brewer, mix, scale } from "chroma-js";
 import { SVGMotionProps } from "framer-motion";
 import { keyBy, uniq } from "lodash";
-import { useCallback, useMemo, useState } from "react";
+import { SVGProps, useCallback, useEffect, useMemo, useState } from "react";
 import { MiniGraphProps } from "..";
 import { ExpandableGraphProps } from "../expandable-graph";
 import { SimpleNode } from "./model";
@@ -60,9 +60,33 @@ export function getAllChildrenNames(names: string[], nodesByParent: Record<strin
     ];
 }
 
-// type ReuseMiniGraphProps = "onSelectNode" | "selectedNode" | "onExpandToggleNode" |"";
+function useSearchParamsArray(
+    field: string,
+    useSearchParams = true
+): [string[], (value: (v: string[]) => string[]) => void] {
+    const href = (typeof window === "undefined" || !useSearchParams) ? undefined : window.location.href;
+    const url = useMemo(() => (!href ? undefined : new URL(href)), [href]);
+    const [exp, setExp] = useState<string[]>(url?.searchParams?.getAll(field) ?? []);
+    const setValue = useCallback(
+        (cb: (oldVal: string[]) => string[]) => {
+            const oldArray = url?.searchParams?.getAll(field) ?? [];
+            const newVal = cb(oldArray);
+            if (!url) return newVal;
+            setExp(newVal);
+            url.searchParams.delete(field);
+            for (const v of newVal) {
+                if (url.searchParams.get(field) === null) url.searchParams.set(field, v);
+                else url.searchParams.append(field, v);
+            }
+            window.history.replaceState(null, "", url); // or pushState
+        },
+        [field, url]
+    );
+    return [exp, setValue];
+}
+
 export function useExpandToggle(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onExpandToggleNode"]] {
-    const [expanded, setExpanded] = useState<string[]>([]);
+    const [expanded, setExpanded] = useSearchParamsArray("expanded");
     const nodesByParent = useChildrenNodesByParent(nodes);
     const onExpandToggleNode = useCallback<Required<ExpandableGraphProps>["onExpandToggleNode"]>(
         ({ name, expand }) => {
@@ -72,13 +96,13 @@ export function useExpandToggle(nodes: SimpleNode[]): [string[], Required<Expand
                 return previous.filter((e) => !childrenNames.includes(e));
             });
         },
-        [nodesByParent]
+        [nodesByParent, setExpanded]
     );
     return [expanded, onExpandToggleNode];
 }
 
 export function useSelectNodes(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onSelectNode"]] {
-    const [selectedNode, setSelectedNode] = useState<string[]>([]);
+    const [selectedNode, setSelectedNode] = useSearchParamsArray("select");
     const nodesByParent = useChildrenNodesByParent(nodes);
     const onSelectNode = useCallback<Required<ExpandableGraphProps>["onSelectNode"]>(
         ({ name, selected }) => {
@@ -87,41 +111,25 @@ export function useSelectNodes(nodes: SimpleNode[]): [string[], Required<Expanda
                 return !selected ? prev.filter((p) => !childrenNames.includes(p)) : uniq([...prev, ...childrenNames]);
             });
         },
-        [nodesByParent]
+        [nodesByParent, setSelectedNode]
     );
     return [selectedNode, onSelectNode];
 }
 
-export function useEdgeIn(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onEdgeInNode"]] {
-    const [edgeIn, setEdgeIn] = useState<string[]>([]);
+export function useFilterEdges(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onFilterEdges"]] {
+    const [edgeIn, setEdgeIn] = useSearchParamsArray("filter");
     const nodesByParent = useChildrenNodesByParent(nodes);
-    const onEdgeInToggle = useCallback<Required<ExpandableGraphProps>["onEdgeInNode"]>(
-        ({ names, selected }) => {
+    const onEdgeInToggle = useCallback<Required<ExpandableGraphProps>["onFilterEdges"]>(
+        ({ names, include }) => {
             setEdgeIn((previous) => {
-                if (selected) return uniq([...previous, ...names]);
+                if (include) return uniq([...previous, ...names]);
                 const childrenNames = getAllChildrenNames(names, nodesByParent);
                 return previous.filter((e) => !childrenNames.includes(e));
             });
         },
-        [nodesByParent]
+        [nodesByParent, setEdgeIn]
     );
     return [edgeIn, onEdgeInToggle];
-}
-
-export function useEdgeOut(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onEdgeOutNode"]] {
-    const [edgeOut, setEdgeOut] = useState<string[]>([]);
-    const nodesByParent = useChildrenNodesByParent(nodes);
-    const onEdgeInToggle = useCallback<Required<ExpandableGraphProps>["onEdgeOutNode"]>(
-        ({ names, selected }) => {
-            setEdgeOut((previous) => {
-                if (selected) return uniq([...previous, ...names]);
-                const childrenNames = getAllChildrenNames(names, nodesByParent);
-                return previous.filter((e) => !childrenNames.includes(e));
-            });
-        },
-        [nodesByParent]
-    );
-    return [edgeOut, onEdgeInToggle];
 }
 
 export function useHoverMotion<T extends SVGElement = SVGGElement>(): [
@@ -137,6 +145,21 @@ export function useHoverMotion<T extends SVGElement = SVGGElement>(): [
     return [hover, { onMouseEnter, onMouseLeave }];
 }
 
+export function useHoverMotion2<T extends SVGElement = SVGGElement>(): [
+    boolean,
+    {
+        onMouseEnter: SVGProps<T>["onMouseEnter"];
+        onMouseLeave: SVGProps<T>["onMouseLeave"];
+    }
+] {
+    const [hover, setHover] = useState(false);
+    const onMouseEnter = useCallback(() => setHover(true), []);
+    const onMouseLeave = useCallback(() => setHover(false), []);
+    return [hover, { onMouseEnter, onMouseLeave }];
+}
+
+
+
 export function useHover<T extends SVGElement = SVGGElement>(): [
     boolean,
     {
@@ -145,11 +168,13 @@ export function useHover<T extends SVGElement = SVGGElement>(): [
     }
 ] {
     const [hover, setHover] = useState(false);
-    const onMouseEnter = useCallback(() => setHover(true), []);
-    const onMouseLeave = useCallback(() => setHover(false), []);
-    return [hover, { onmouseenter: onMouseEnter, onmouseleave: onMouseLeave }];
+    const onmouseenter = useCallback(() => setHover(true), []);
+    const onmouseleave = useCallback(() => setHover(false), []);
+    return [hover, { onmouseenter, onmouseleave }];
 }
 
-export function getAllChildNodes(onGetSubGraph: MiniGraphProps["onGetSubgraph"], nodeName: string): SimpleNode[] {
-    return [...(onGetSubGraph?.(nodeName)?.flatMap((n) => [n, ...getAllChildNodes(onGetSubGraph, n.name)]) ?? [])];
+export function getAllChildNodes(onGetSubGraph: MiniGraphProps["onGetSubgraph"], nodeName: string): string[] {
+    return (
+        onGetSubGraph?.(nodeName)?.flatMap((node) => [node.name, ...getAllChildNodes(onGetSubGraph, node.name)]) ?? []
+    );
 }

@@ -150,7 +150,7 @@ export function useDefaultOptions(
     {
         defaultWidth,
         defaultHeight,
-        iterations = 100,
+        iterations = 30,
         debugMassNode = false,
         textSize,
         gravity = -12,
@@ -169,7 +169,7 @@ export function useDefaultOptions(
 ) {
     return useMemo<RequiredGraphOptions>(
         () => ({
-            defaultWidth: (defaultWidth ?? 100) * zoom,
+            defaultWidth: (defaultWidth ?? 110) * zoom,
             defaultHeight: (defaultHeight ?? 30) * zoom,
             iterations,
             debugMassNode,

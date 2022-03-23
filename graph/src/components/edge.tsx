@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import * as React from "react";
 import { memo, useState } from "react";
 import { AnchorDetails } from "../hooks/calc-best-anchors";
-import { useHover } from "../hooks/dynamic-nodes";
+import { useHover, useHoverMotion } from "../hooks/dynamic-nodes";
 import { RequiredGraphOptions, SimpleEdge, SimpleNode, transition } from "../hooks/model";
 
 const arrowHeight = 6;
@@ -21,7 +21,7 @@ interface Props {
 export const Edge = memo<Props>(({ edge, nodesDict, points, thickness, options }) => {
     // get the containing rectangle
     // adjust the position of the nodes to fit within the targetArea
-    const [hover, mouseEvents] = useHover();
+    const [hover, mouseEvents] = useHoverMotion();
     const textStroke = useColorModeValue("rgba(255,255,255,0.3)", "rgba(0,0,0,0.3)");
     const intensify = useColorModeValue("black", "white");
     const blend = useColorModeValue("white", "black");

@@ -10,6 +10,7 @@ interface Props {
     size: Size;
     initialCenterPos: Point;
     centerPos: Point;
+    textMarginWidth?: number;
     fillColor?: string;
     borderColor?: string;
     borderThickness?: number;
@@ -33,6 +34,7 @@ export const TextBox: FC<Props> = ({
     initialSize,
     centerPos,
     size,
+    textMarginWidth = 0,
     fillColor = "transparent",
     borderColor,
     textColor = "black",
@@ -53,7 +55,6 @@ export const TextBox: FC<Props> = ({
     const onClick = useCallback(() => {
         if (onSelectNode) onSelectNode({ name, selected: !selected });
     }, [onSelectNode, name, selected]);
-    // const x = useText({})
     const textSizeDefaulted = textSize ?? size.height / 4;
     return (
         <>
@@ -129,7 +130,7 @@ export const TextBox: FC<Props> = ({
                     verticalAnchor={verticalAnchor}
                     x={0}
                     y={0}
-                    width={size.width}
+                    width={size.width - textMarginWidth}
                     height={size.height}
                     fontSize={textSizeDefaulted}
                     fontWeight="bold"

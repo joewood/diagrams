@@ -23,10 +23,8 @@ export interface MiniGraphProps {
     onSelectNode: (args: { name: string; selected: boolean }) => void;
     onExpandToggleNode?: (args: { name: string; expand: boolean }) => void;
     expanded: string[];
-    edgeInNodes?: string[];
-    edgeOutNodes?: string[];
-    onEdgeInNode?: (args: { names: string[]; selected: boolean }) => void;
-    onEdgeOutNode?: (args: { names: string[]; selected: boolean }) => void;
+    edgesFiltered?: string[];
+    onFilterEdges?: (args: { names: string[]; include: boolean }) => void;
     selectedNodes: string[] | null;
     name: string;
     onResizeNeeded: (name: string, action: ResizeNeededAction) => void;
@@ -50,10 +48,8 @@ export const MiniGraph = memo<MiniGraphProps>(
         onSelectNode,
         selectedNodes,
         screenPosition,
-        edgeInNodes,
-        edgeOutNodes,
-        onEdgeInNode,
-        onEdgeOutNode,
+        edgesFiltered,
+        onFilterEdges,
         onResizeNeeded,
         onGetSubgraph,
         name,
@@ -124,10 +120,8 @@ export const MiniGraph = memo<MiniGraphProps>(
                         subNodes={onGetSubgraph?.(node.name)}
                         onExpandToggleNode={onExpandToggleNode}
                         isExpanded={expanded.includes(node.name)}
-                        edgeInNodes={edgeInNodes}
-                        edgeOutNodes={edgeOutNodes}
-                        onEdgeInNode={onEdgeInNode}
-                        onEdgeOutNode={onEdgeOutNode}
+                        edgesFiltered={edgesFiltered}
+                        onFilterEdges={onFilterEdges}
                         expanded={expanded}
                         onSelectNode={onSelectNode}
                         onGetSubgraph={onGetSubgraph}

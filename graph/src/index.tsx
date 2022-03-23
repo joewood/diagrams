@@ -6,4 +6,4 @@ export { PhysicsSettings, useGraphOptions } from "./physics";
 export { SimpleGraph } from "./simple-graph";
 export { useDefaultOptions, useSimpleGraph } from "./hooks/use-ngraph";
 export { useDimensions } from "./use-dimensions";
-export { useSelectNodes, useExpandToggle, useEdgeIn, useEdgeOut } from "./hooks/dynamic-nodes";
+export { useSelectNodes, useExpandToggle, useFilterEdges } from "./hooks/dynamic-nodes";

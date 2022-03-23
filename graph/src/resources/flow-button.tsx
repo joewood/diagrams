@@ -2,7 +2,7 @@ import { Point } from "framer-motion";
 import * as React from "react";
 import { memo, useCallback } from "react";
 import { MiniGraphProps } from "..";
-import { useHover } from "../hooks/dynamic-nodes";
+import { useHover, useHoverMotion, useHoverMotion2 } from "../hooks/dynamic-nodes";
 import { Arrow } from "./shapes";
 
 const boundBox: any = "bounding-box";
@@ -12,21 +12,17 @@ interface Props {
     width: number;
     height: number;
     highlightColor: string;
-    inverseColor:string;
+    inverseColor: string;
     arrowColor: string;
-    flowIn: boolean;
     nodeNames: string[];
-    onClick: MiniGraphProps["onEdgeInNode"];
+    onClick: MiniGraphProps["onFilterEdges"];
     enabled: boolean;
 }
 
 export const FlowButton = memo<Props>(
-    ({ pos, arrowColor, width, height, nodeNames, flowIn, highlightColor,inverseColor, onClick, enabled }) => {
-        const [over, mouseEvents] = useHover();
-        const cb = useCallback(
-            () => onClick?.({ names: nodeNames, selected: !enabled }),
-            [enabled, nodeNames, onClick]
-        );
+    ({ pos, arrowColor, width, height, nodeNames, highlightColor, inverseColor, onClick, enabled }) => {
+        const [over, mouseEvents] = useHoverMotion2();
+        const cb = useCallback(() => onClick?.({ names: nodeNames, include: !enabled }), [enabled, nodeNames, onClick]);
         return (
             <g
                 x={100}
@@ -44,17 +40,8 @@ export const FlowButton = memo<Props>(
                     height={100}
                     fill={enabled ? (over ? highlightColor : arrowColor) : inverseColor}
                 />
-                {flowIn ? (
-                    <>
-                        <rect x={5} y={5} width={20} height={90} fill="currentColor" />
-                        <Arrow start={{ x: 100, y: 50 }} end={{ x: 28, y: 50 }} arrowWidth={60} />
-                    </>
-                ) : (
-                    <>
-                        <rect x={5} y={5} width={20} height={90} fill="currentColor" />
-                        <Arrow start={{ x: 28, y: 50 }} end={{ x: 100, y: 50 }} arrowWidth={60} />
-                    </>
-                )}
+                <rect x={5} y={5} width={20} height={90} fill="currentColor" />
+                <Arrow start={{ x: 100, y: 50 }} end={{ x: 28, y: 50 }} arrowWidth={60} />
             </g>
         );
     }

@@ -1,7 +1,7 @@
 import { Point } from "framer-motion";
 import * as React from "react";
 import { memo } from "react";
-import { useHover } from "../hooks/dynamic-nodes";
+import { useHover, useHoverMotion, useHoverMotion2 } from "../hooks/dynamic-nodes";
 import { zeroPoint } from "../hooks/model";
 import { Arrow } from "./shapes";
 
@@ -19,7 +19,7 @@ interface ExpandButtonProps {
 
 export const ExpandButton = memo<ExpandButtonProps>(
     ({ pos = zeroPoint, highlightColor, arrowColor, width, height, expanded, onClick }) => {
-        const [hover, mouseEvents] = useHover();
+        const [hover, mouseEvents] = useHoverMotion2<SVGGElement>();
         return (
             <g
                 transform={`translate(${pos.x} ${pos.y}),scale(${width / 100} ${height / 100})`}

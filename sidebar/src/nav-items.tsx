@@ -10,7 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { isEqual, kebabCase, uniq } from "lodash";
 import * as React from "react";
-import { FC, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, memo, useCallback, useEffect, useMemo, useState } from "react";
 import { NavItem } from "./nav-item";
 import { SideBarProps } from "./sidebar";
 
@@ -46,8 +46,7 @@ export interface NavItemsProps {
     options: Required<Required<SideBarProps>["options"]>;
 }
 
-export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "", options }) => {
-    console.log("CURR",currentPath)
+export const NavItems: FC<NavItemsProps> = memo<NavItemsProps>(({ currentPath, pages, parentPath = "", options }) => {
     const [navState, setNavState] = useNavigationState(currentPath, pages, parentPath);
     const defaultedPages = useMemo(
         () =>
@@ -138,4 +137,4 @@ export const NavItems: FC<NavItemsProps> = ({ currentPath, pages, parentPath = "
             })}
         </Accordion>
     );
-};
+});

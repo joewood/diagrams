@@ -4,8 +4,7 @@ import {
     GraphOptions,
     SimpleEdge,
     SimpleNode,
-    useEdgeIn,
-    useEdgeOut,
+    useFilterEdges,
     useDefaultOptions,
     useExpandToggle,
     useSelectNodes,
@@ -43,8 +42,7 @@ export const DemoGraphTwoDeepBasic: FC<{
 }> = ({ options: _options }) => {
     const [expanded, setExpanded] = useExpandToggle(nodesBasic);
     const [selectedNode, setSelectedNode] = useSelectNodes(nodesBasic);
-    const [edgeIn, onEdgeIn] = useEdgeIn(nodesBasic);
-    const [edgeOut, onEdgeOut] = useEdgeOut(nodesBasic);
+    const [edgesFiltered, onFilterEdges] = useFilterEdges(nodesBasic);
 
     const options = useDefaultOptions(_options);
     return (
@@ -53,10 +51,8 @@ export const DemoGraphTwoDeepBasic: FC<{
                 key="expandable"
                 simpleNodes={nodesBasic}
                 simpleEdges={edges2}
-                edgeInNodes={edgeIn}
-                edgeOutNodes={edgeOut}
-                onEdgeInNode={onEdgeIn}
-                onEdgeOutNode={onEdgeOut}
+                edgesFiltered={edgesFiltered}
+                onFilterEdges={onFilterEdges}
                 onExpandToggleNode={setExpanded}
                 expanded={expanded}
                 onSelectNode={setSelectedNode}

@@ -1,6 +1,6 @@
 import { Box, CSSObject, Link } from "@chakra-ui/react";
 import * as React from "react";
-import { ElementType, FC } from "react";
+import { ElementType, FC, memo } from "react";
 import { NavItems, Page } from "./nav-items";
 
 export interface SideBarProps {
@@ -16,7 +16,7 @@ export interface SideBarProps {
     };
 }
 
-export const SideBar: FC<SideBarProps> = ({
+export const SideBar: FC<SideBarProps> = memo<SideBarProps>(({
     pages,
     currentPath,
     top,
@@ -39,4 +39,4 @@ export const SideBar: FC<SideBarProps> = ({
             <NavItems options={{ drawerWidth, linkElement, itemHeight }} pages={pages} currentPath={currentPath} />
         </Box>
     );
-};
+});

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { ExpandableGraph, GraphOptions, useExpandToggle, useEdgeIn, useEdgeOut, useSelectNodes } from "@diagrams/graph";
+import { ExpandableGraph, GraphOptions, useExpandToggle, useFilterEdges, useSelectNodes } from "@diagrams/graph";
 import { useDefaultOptions } from "@diagrams/graph/lib/use-ngraph";
 import * as React from "react";
 import { FC } from "react";
@@ -13,19 +13,17 @@ export const DemoGraphThreeDeep: FC<{
         ...node,
     }));
     const [expanded, onExpandToggleNode] = useExpandToggle(nodes);
+    console.log("Expand", expanded);
     const [selectedNodes, onSelectNode] = useSelectNodes(nodes);
-    const [edgeIn, onEdgeIn] = useEdgeIn(nodes);
-    const [edgeOut, onEdgeOut] = useEdgeOut(nodes);
+    const [edgesFiltered, onFilterEdges] = useFilterEdges(nodes);
     return (
         <Box width="100%" height="100%">
             <ExpandableGraph
                 key="expandable"
                 simpleNodes={nodes}
                 simpleEdges={edges}
-                edgeInNodes={edgeIn}
-                edgeOutNodes={edgeOut}
-                onEdgeInNode={onEdgeIn}
-                onEdgeOutNode={onEdgeOut}
+                edgesFiltered={edgesFiltered}
+                onFilterEdges={onFilterEdges}
                 onExpandToggleNode={onExpandToggleNode}
                 expanded={expanded}
                 onSelectNode={onSelectNode}

@@ -13,14 +13,7 @@ import { useDimensions } from "./use-dimensions";
 export interface ExpandableGraphProps
     extends Pick<
         MiniGraphProps,
-        | "onSelectNode"
-        | "selectedNodes"
-        | "simpleNodes"
-        | "edgeInNodes"
-        | "edgeOutNodes"
-        | "onEdgeInNode"
-        | "onEdgeOutNode"
-        | "onExpandToggleNode"
+        "onSelectNode" | "selectedNodes" | "simpleNodes" | "edgesFiltered" | "onFilterEdges" | "onExpandToggleNode"
     > {
     simpleEdges: SimpleEdge[];
     expanded: string[];
@@ -32,10 +25,8 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         simpleEdges,
         simpleNodes,
         onSelectNode,
-        edgeInNodes,
-        edgeOutNodes,
-        onEdgeInNode,
-        onEdgeOutNode,
+        edgesFiltered,
+        onFilterEdges,
         selectedNodes,
         onExpandToggleNode,
         expanded,
@@ -87,13 +78,10 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                     .map((s) => s.name),
             [routedEdges, selectedNodes]
         );
-        const filteredEdges = useMemo(
-            () =>
-                !edgeInNodes || !edgeInNodes
-                    ? routedEdges
-                    : routedEdges.filter((e) => edgeInNodes?.includes(e.to) || edgeOutNodes?.includes(e.from)),
-            [edgeInNodes, edgeOutNodes, routedEdges]
-        );
+        const filteredEdges = useMemo(() => {
+            const fillDict = keyBy(edgesFiltered ?? [], (e) => e);
+            return !edgesFiltered ? routedEdges : routedEdges.filter((e) => fillDict[e.to] && fillDict[e.from]);
+        }, [edgesFiltered, routedEdges]);
         const nodesByParent = useChildrenNodesByParent(defaultSimpleNodes);
         const onGetSubgraph = useCallback((name: string) => nodesByParent[name], [nodesByParent]);
         const parentNodes = useMemo(
@@ -124,10 +112,8 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                             options={options}
                             onSelectNode={onSelectNode}
                             selectedNodes={selectedNodes}
-                            edgeInNodes={edgeInNodes}
-                            edgeOutNodes={edgeOutNodes}
-                            onEdgeInNode={onEdgeInNode}
-                            onEdgeOutNode={onEdgeOutNode}
+                            edgesFiltered={edgesFiltered}
+                            onFilterEdges={onFilterEdges}
                             onGetSubgraph={onGetSubgraph}
                             onExpandToggleNode={onExpandToggleNode}
                             expanded={expanded}

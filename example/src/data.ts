@@ -9,13 +9,21 @@ interface Tree {
 const Network = [
     "Data Network",
     "Voice Network",
+    "2-",
     "Internet Connectivity",
     "Virtual Private Network",
+    "1-",
     "Domain Services",
     "Load Balancing",
+    "0-",
 ];
 
-const Compute = ["Physical Compute", "Virtual Compute and Containers", "Compute on Demand","Very long description of something that needs growing"];
+const Compute = [
+    "Physical Compute",
+    "Virtual Compute and Containers",
+    "Compute on Demand",
+    "Very long description of something that needs growing",
+];
 
 const Data = ["Database", "Distributed Cache", "Data Warehouse"];
 
