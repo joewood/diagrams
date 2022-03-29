@@ -32,18 +32,16 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         expanded,
         options: _options = {},
     }) => {
-        const [zoom] = useState(1);
-        const options = useDefaultOptions(_options, zoom);
-
-        const [dimensionsRef, { size: targetSize }] = useDimensions<HTMLDivElement>();
+        const options = useDefaultOptions(_options);
+        const [dimensionsRef, { size: targetSize }] = useDimensions<HTMLDivElement>(true);
         const defaultContainerSize = useMemo(
             () => (targetSize && { width: targetSize.width, height: targetSize.height }) || undefined,
             [targetSize]
         );
         // Resize Demand - change the state
         const [graphSize, setGraphSize] = useState<Size>();
-        const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((name, { suggestedSize }) => {
-            setGraphSize(suggestedSize);
+        const onResizeNeeded = useCallback<MiniGraphProps["onResizeNode"]>((name, size) => {
+            setGraphSize(size);
         }, []);
         useEffect(() => {
             setGraphSize((oldGraphSize) => (!oldGraphSize ? defaultContainerSize : oldGraphSize));
@@ -84,14 +82,7 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
         }, [edgesFiltered, routedEdges]);
         const nodesByParent = useChildrenNodesByParent(defaultSimpleNodes);
         const onGetSubgraph = useCallback((name: string) => nodesByParent[name], [nodesByParent]);
-        const parentNodes = useMemo(
-            () =>
-                topLevelNodes.map((node, index) => {
-                    const size = node.size ?? { width: options.defaultWidth, height: options.defaultHeight };
-                    return { ...node, size };
-                }),
-            [topLevelNodes, options.defaultWidth, options.defaultHeight]
-        );
+        const parentNodes = topLevelNodes;
         const localSimpleEdges = useMemo(() => {
             if (!parentNodes) return [];
             const subNodesDict = keyBy(parentNodes, (s) => s.name);
@@ -100,7 +91,13 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
 
         const styles = useStyleConfig("Graph");
         return (
-            <Box ref={dimensionsRef} width="100%" height="100%" overflow="auto" sx={styles}>
+            <Box
+                ref={dimensionsRef}
+                width="100%"
+                height="100%"
+                overflow="auto"
+                sx={styles}
+            >
                 <SvgContainer key="svg" nodeMargin={options.nodeMargin} screenSize={graphSize}>
                     {graphSize && (
                         <MiniGraph
@@ -117,7 +114,7 @@ export const ExpandableGraph = memo<ExpandableGraphProps>(
                             onGetSubgraph={onGetSubgraph}
                             onExpandToggleNode={onExpandToggleNode}
                             expanded={expanded}
-                            onResizeNeeded={onResizeNeeded}
+                            onResizeNode={onResizeNeeded}
                             screenSize={graphSize}
                             screenPosition={zeroPoint}
                             onBubblePositions={onBubblePositions}

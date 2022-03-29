@@ -6,9 +6,8 @@ import { every, keyBy } from "lodash";
 import * as React from "react";
 import { FC, useCallback, useEffect, useMemo } from "react";
 import { SimpleNode } from "..";
-import { getAllChildNodes } from "../hooks/dynamic-nodes";
+import { getAllChildNodes, useNodeText } from "../hooks/dynamic-nodes";
 import { ScreenPositionedNode, Size, transition } from "../hooks/model";
-import { useGraphResize } from "../hooks/use-ngraph";
 import { ExpandButton } from "../resources/expand-button";
 import { FlowButton } from "../resources/flow-button";
 import { MiniGraph, MiniGraphProps } from "./mini-graph";
@@ -30,9 +29,9 @@ export interface NodeProps
     > {
     screenNode: ScreenPositionedNode;
     subNodes?: SimpleNode[];
-    onResizeNode: (name: string, sizeOverride: Size | null) => void;
+    onResizeNode: (name: string, sizeOverride: Size, expanded: boolean) => void;
     showExpandButton?: boolean;
-    isExpanded?: boolean;
+    isExpanded: boolean;
 }
 
 /** Node either paints as a Node or a sub-graph.
@@ -62,7 +61,6 @@ export const Node: FC<NodeProps> = ({
     const isSelected = selectedNodes?.includes(screenNode.name) ?? false;
 
     // request for expansion or shrink handled here, size is updated
-    const onResizeNeeded = useGraphResize(screenNode.name, screenNode.size, onResizeNode, isExpanded);
     const screenTopLeft = useMemo(
         () => ({
             x: screenNode.screenPosition.x - screenNode.size.width / 2,
@@ -92,36 +90,16 @@ export const Node: FC<NodeProps> = ({
         return allRoutedSimpleEdges.filter((e) => subNodesDict[e.from] && subNodesDict[e.to]);
     }, [allRoutedSimpleEdges, subNodes]);
 
-    const textProps = useText({
-        children: screenNode.name ?? screenNode.name,
-        textAnchor: "middle",
-        verticalAnchor: "middle",
-        x: 0,
-        y: 0,
-        width: screenNode.size.width - options.textSize * 4,
-        height: screenNode.size.height,
-        fontSize: options.textSize,
-        fontWeight: "bold",
-    });
-    useEffect(() => {
-        const estimatedSize = (textProps.wordsByLines.length + 1.5) * options.textSize;
-        if (estimatedSize > Math.max(screenNode.size.height, options.defaultHeight)) {
-            onResizeNeeded(screenNode.name, {
-                suggestedSize: {
-                    width: screenNode.size.width,
-                    height: estimatedSize * 1.1,
-                },
-            });
-        }
-    }, [
-        onResizeNeeded,
-        options.defaultHeight,
-        options.textSize,
+    // if the collapsed form of the node's text causes out of bound rendering then ask to resize the node
+    useNodeText(
         screenNode.name,
-        screenNode.size.height,
-        screenNode.size.width,
-        textProps.wordsByLines.length,
-    ]);
+        screenNode.label ?? screenNode.name,
+        screenNode.size,
+        isExpanded,
+        options.textSize,
+        options.defaultHeight,
+        onResizeNode
+    );
 
     const allChildNodes = useMemo(
         () => [screenNode.name, ...getAllChildNodes(onGetSubgraph, screenNode.name)],
@@ -188,7 +166,7 @@ export const Node: FC<NodeProps> = ({
                     size={labelSize}
                     textMarginWidth={options.textSize * 4}
                     name={screenNode.name}
-                    text={screenNode.name}
+                    text={screenNode.label ?? screenNode.name}
                     fillColor={textBackground}
                     verticalAnchor="middle"
                     textAnchor="middle"
@@ -244,7 +222,7 @@ export const Node: FC<NodeProps> = ({
                     onFilterEdges={onFilterEdges}
                     onSelectNode={onSelectNode}
                     selectedNodes={selectedNodes}
-                    onResizeNeeded={onResizeNeeded}
+                    onResizeNode={onResizeNode}
                     onGetSubgraph={onGetSubgraph}
                     onExpandToggleNode={onExpandToggleNode}
                     expanded={expanded}

@@ -1,18 +1,11 @@
 import { keyBy } from "lodash";
 import * as React from "react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import {
-    Point,
-    RequiredGraphOptions,
-    ResizeNeededAction,
-    ScreenRect,
-    SimpleEdge,
-    SimpleNode,
-    Size
-} from "../hooks/model";
-import { useSimpleGraph } from "../hooks/use-ngraph";
+import { memo, useEffect, useMemo } from "react";
+import { useNodeSize } from "../hooks/dynamic-nodes";
+import { Point, RequiredGraphOptions, ScreenRect, SimpleEdge, SimpleNode, Size } from "../hooks/model";
+import { usePositionedNodes } from "../hooks/use-ngraph";
 import { useScreenNodesVectorMethod } from "../hooks/use-screen-vector";
-import { Node, NodeProps } from "./node";
+import { Node } from "./node";
 
 export interface MiniGraphProps {
     simpleNodes: SimpleNode[];
@@ -27,7 +20,7 @@ export interface MiniGraphProps {
     onFilterEdges?: (args: { names: string[]; include: boolean }) => void;
     selectedNodes: string[] | null;
     name: string;
-    onResizeNeeded: (name: string, action: ResizeNeededAction) => void;
+    onResizeNode: (name: string, size: Size, expanded: boolean) => void;
     onBubblePositions: (nodes: ScreenRect[]) => void;
     onGetSubgraph?: (name: string) => SimpleNode[];
     options: Pick<
@@ -50,7 +43,7 @@ export const MiniGraph = memo<MiniGraphProps>(
         screenPosition,
         edgesFiltered,
         onFilterEdges,
-        onResizeNeeded,
+        onResizeNode: onResizeParent,
         onGetSubgraph,
         name,
         screenSize,
@@ -59,55 +52,40 @@ export const MiniGraph = memo<MiniGraphProps>(
         onBubblePositions,
         options,
     }) => {
-        const [localSizeOverrides, setLocalSizeOverrides] = useState<Record<string, Size>>({});
+        const [getSize, onResizeChildNodes] = useNodeSize(options.defaultWidth, options.defaultHeight);
         // get the virtual positions of the nodes in a graph. This is unbounded.
-        const [positionedNodes] = useSimpleGraph(simpleNodes, localSimpleEdges, localSizeOverrides, options);
+        const [positionedNodes] = usePositionedNodes(simpleNodes, localSimpleEdges, getSize, expanded, options);
         // Resize Demand - change the state
-        const nodeDict = useMemo(() => keyBy(positionedNodes, (p) => p.name),[positionedNodes]);
+        // const nodeDict = useMemo(() => keyBy(positionedNodes, (p) => p.name), [positionedNodes]);
         // adjust the position of the nodes to fit within the targetArea
         // get the containing rectangle of the graph and project it onto screen size and pos
+        // use the screenNodes as the initial positions managing the state of the nodes
+        // this is updated using the onNodesPositioned
+
         const [screenNodes, newSize] = useScreenNodesVectorMethod(
-            nodeDict,
             screenPosition,
-            screenSize,
             positionedNodes,
-            localSizeOverrides,
             options.nodeMargin,
             options.titleHeight
         );
 
-        // use the screenNodes as the initial positions managing the state of the nodes
-        // this is updated using the onNodesPositioned
-        const onResizeSetLocalSize = useCallback<NodeProps["onResizeNode"]>((name, size) => {
-            setLocalSizeOverrides((oldSizes) => {
-                if (!size) {
-                    const newSizes = { ...oldSizes };
-                    delete newSizes[name];
-                    return newSizes;
-                } else if (
-                    !oldSizes[name] ||
-                    oldSizes[name]?.width !== size.width ||
-                    oldSizes[name]?.height !== size.height
-                ) {
-                    // console.log(`Setting Local Size for: ${name} ${JSON.stringify(size)}`);
-                    return { ...oldSizes, [name]: size };
-                }
-                return oldSizes;
-            });
-        }, []);
         useEffect(() => onBubblePositions?.(screenNodes), [onBubblePositions, screenNodes]);
         // useOverlapCheck(name, onResizeNeeded, options, screenNodes, screenPosition, screenSize);
         function diffRange(n1: number, n2: number) {
             return Math.abs((n1 - n2) / n1) > 0.01;
         }
-        if (diffRange(screenSize.width, newSize.width) || diffRange(screenSize.height, newSize.height)) {
-            onResizeNeeded(name, {
-                suggestedSize: {
+        useEffect(() => {
+            if (diffRange(screenSize.width, newSize.width) || diffRange(screenSize.height, newSize.height)) {
+                // console.log(
+                //     `Different Enough ${name} ${screenSize.width}/${newSize.width} ${screenSize.height}/${newSize.height}`
+                // );
+                const size = {
                     width: diffRange(screenSize.width, newSize.width) ? newSize.width : screenSize.width,
                     height: diffRange(screenSize.height, newSize.height) ? newSize.height : screenSize.height,
-                },
-            });
-        }
+                };
+                onResizeParent(name, size, true);
+            }
+        }, [name, newSize.height, newSize.width, onResizeParent, screenSize.height, screenSize.width]);
         // notify parent graph that a node has been changed
         return (
             <>
@@ -126,7 +104,7 @@ export const MiniGraph = memo<MiniGraphProps>(
                         onSelectNode={onSelectNode}
                         onGetSubgraph={onGetSubgraph}
                         onBubblePositions={onBubblePositions}
-                        onResizeNode={onResizeSetLocalSize}
+                        onResizeNode={onResizeChildNodes}
                         selectedNodes={selectedNodes}
                         options={options}
                     />

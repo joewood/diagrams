@@ -21,21 +21,10 @@ export const DemoGraphSimpleBusy: FC<{
     );
     const [selected, setSelected] = useSelectNodes(moreNodes);
     const options = useDefaultOptions(_options);
-    const largeNodes = useMemo(() => {
-        return moreNodes.map((node) => ({
-            ...node,
-            size: selected.includes(node.name)
-                ? {
-                      width: (node.size?.width ?? options.defaultWidth) * 2,
-                      height: (node.size?.height ?? options.defaultHeight) * 2,
-                  }
-                : node.size,
-        }));
-    }, [moreNodes, options.defaultHeight, options.defaultWidth, selected]);
     return (
         <Box width="100%" height="100%">
             <SimpleGraph
-                simpleNodes={largeNodes}
+                simpleNodes={nodesLeaf}
                 simpleEdges={edges}
                 options={options}
                 onSelectNode={setSelected}

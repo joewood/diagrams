@@ -3,12 +3,14 @@ import createLayout, { Layout } from "ngraph.forcelayout";
 import createGraph, { Link } from "ngraph.graph";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MiniGraphProps } from "../components/mini-graph";
-import { NodeProps } from "../components/node";
 import {
     GraphOptions,
     NGraph,
     NGraphLayout,
-    PositionedNode, RequiredGraphOptions, ScreenRect, SimpleEdge,
+    PositionedNode,
+    RequiredGraphOptions,
+    ScreenRect,
+    SimpleEdge,
     SimpleNode,
     Size,
     zeroPoint
@@ -64,7 +66,11 @@ export function useChildrenNodesByParent(simpleNodes: SimpleNode[]): Record<stri
     }, [simpleNodes]);
 }
 
-function useLayout(graph: NGraph, sizeOverrides: Record<string, Size>, options: RequiredGraphOptions): Layout<NGraph> {
+function useLayout(
+    graph: NGraph,
+    getSize: (name: string, expanded: boolean) => Size | undefined,
+    options: RequiredGraphOptions
+): Layout<NGraph> {
     return useMemo(() => {
         // Do the LAYOUT
         const layout = createLayout(graph, options);
@@ -73,29 +79,27 @@ function useLayout(graph: NGraph, sizeOverrides: Record<string, Size>, options: 
             (body, id) =>
                 (body.mass =
                     50 *
-                    (
-                        sizeOverrides[id] ??
-                        graph.getNode(id)?.data?.size ?? { width: options.defaultWidth, height: options.defaultHeight }
-                    ).width *
-                    (
-                        sizeOverrides[id] ??
-                        graph.getNode(id)?.data?.size ?? { width: options.defaultWidth, height: options.defaultHeight }
-                    ).height) /
+                    (getSize(id as string, false) ?? { width: options.defaultWidth, height: options.defaultHeight })
+                        .width *
+                    (getSize(id as string, false) ?? { width: options.defaultWidth, height: options.defaultHeight })
+                        .height) /
                 (options.defaultWidth * options.defaultHeight)
         );
         for (let i = 0; i < options.iterations; ++i) {
             layout.step();
         }
         return layout;
-    }, [graph, options, sizeOverrides]);
+    }, [getSize, graph, options]);
 }
 
 function getNodesFromLayout(
     nodesDict: Record<string, SimpleNode>,
     layout: NGraphLayout,
-    options: Pick<RequiredGraphOptions, "defaultWidth" | "defaultHeight">
+    getSize: (name: string, expanded: boolean) => Size,
+    expanded: string[]
 ) {
     const layoutNodes: PositionedNode[] = [];
+    const expandedDict = keyBy(expanded, (e) => e);
     layout.forEachBody((body, key) => {
         const simpleNode = nodesDict[key];
         if (!simpleNode) {
@@ -104,7 +108,7 @@ function getNodesFromLayout(
         layoutNodes.push({
             ...simpleNode,
             body,
-            size: simpleNode.size ?? { width: options.defaultWidth, height: options.defaultHeight },
+            size: getSize(key as string, !!expandedDict[key as string]),
             virtualPos: layout.getNodePosition(key),
             parentVirtualPosition: zeroPoint,
         });
@@ -208,41 +212,20 @@ export function useDefaultOptions(
     );
 }
 
-export function useSimpleGraph(
+/** Hook to take a simple set of nodes and give them a position and size */
+export function usePositionedNodes(
     nodes: SimpleNode[],
     edges: SimpleEdge[],
-    sizeOverrides: Record<string, Size>,
-    options: Pick<Required<GraphOptions>, "defaultWidth" | "defaultHeight" | "iterations">
-): [PositionedNode[]/*, PositionedEdge[]*/] {
+    getSize: (name: string, expanded: boolean) => Size,
+    expanded: string[],
+    options: Pick<Required<GraphOptions>, "iterations">
+): [PositionedNode[] /*, PositionedEdge[]*/] {
     const { graph } = useCreateGraph(nodes, edges);
     const _options = useDefaultOptions(options);
-    const layout = useLayout(graph, sizeOverrides, _options);
+    const layout = useLayout(graph, getSize, _options);
     const nodesDict = useMemo(() => keyBy(nodes, (n) => n.name), [nodes]);
-    return useMemo<ReturnType<typeof useSimpleGraph>>(() => {
-        const positionedNodes = getNodesFromLayout(nodesDict, layout, options);
-        // const positionedEdges = getEdgesFromLayout(
-        //     graph,
-        //     keyBy(positionedNodes, (node) => node.name)
-        // );
+    return useMemo<ReturnType<typeof usePositionedNodes>>(() => {
+        const positionedNodes = getNodesFromLayout(nodesDict, layout, getSize, expanded);
         return [positionedNodes];
-    }, [layout, options, nodesDict]);
-}
-
-/** Useful hook to handle onResizeNeeded for a graph. Simple size is tracked */
-export function useGraphResize(
-    name: string,
-    existingSize: Size,
-    onResizeNode: NodeProps["onResizeNode"],
-    isExpanded: boolean | undefined
-): MiniGraphProps["onResizeNeeded"] {
-    useEffect(() => {
-        if (!isExpanded) onResizeNode(name, null);
-    }, [isExpanded, name, onResizeNode]);
-    return useCallback<MiniGraphProps["onResizeNeeded"]>(
-        (name, { suggestedSize }) => {
-            if (suggestedSize.width === existingSize.width && suggestedSize.height === existingSize.height) return;
-            onResizeNode(name, suggestedSize);
-        },
-        [existingSize.height, existingSize.width, onResizeNode]
-    );
+    }, [nodesDict, layout, getSize, expanded]);
 }

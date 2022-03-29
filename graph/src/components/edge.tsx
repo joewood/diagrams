@@ -49,7 +49,6 @@ export const Edge = memo<Props>(({ edge, nodesDict, points, thickness, options }
                            C ${fromNormal.x}, ${fromNormal.y} 
                              ${fromNormal.x}, ${fromNormal.y}  
                              ${fromNormal.x}, ${fromNormal.y}`.replaceAll("\n\t", " ");
-    // console.log(`startX (${arrowPoints})`, directionX, directionY, toArrowStem.y, toAnchor.y);
     return (
         <>
             {/* We're doing this manually because Chrome doesn't support colored line markers */}

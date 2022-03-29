@@ -1,11 +1,13 @@
 import { useColorModeValue } from "@chakra-ui/react";
+import { useText } from "@visx/text";
 import { brewer, mix, scale } from "chroma-js";
 import { SVGMotionProps } from "framer-motion";
-import { keyBy, uniq } from "lodash";
+import { keyBy, mapValues, uniq } from "lodash";
 import { SVGProps, useCallback, useEffect, useMemo, useState } from "react";
 import { MiniGraphProps } from "..";
+import { NodeProps } from "../components/node";
 import { ExpandableGraphProps } from "../expandable-graph";
-import { SimpleNode } from "./model";
+import { PositionedNode, SimpleNode, Size } from "./model";
 import { useChildrenNodesByParent } from "./use-ngraph";
 
 const palette = brewer.RdYlGn;
@@ -64,7 +66,7 @@ function useSearchParamsArray(
     field: string,
     useSearchParams = true
 ): [string[], (value: (v: string[]) => string[]) => void] {
-    const href = (typeof window === "undefined" || !useSearchParams) ? undefined : window.location.href;
+    const href = typeof window === "undefined" || !useSearchParams ? undefined : window.location.href;
     const url = useMemo(() => (!href ? undefined : new URL(href)), [href]);
     const [exp, setExp] = useState<string[]>(url?.searchParams?.getAll(field) ?? []);
     const setValue = useCallback(
@@ -83,6 +85,90 @@ function useSearchParamsArray(
         [field, url]
     );
     return [exp, setValue];
+}
+
+/** getter and setter for node sizes, uses separate state for expanded nodes */
+export function useNodeSize(
+    defaultWidth: number,
+    defaultHeight: number
+): [(name: string, expanded: boolean) => Size, NodeProps["onResizeNode"]] {
+    const [nodeExpandedSizes, setNodeExpandedSizes] = useState<Record<string, Size>>({});
+    const [nodeCollapseSizes, setNodeCollapsedSizes] = useState<Record<string, Size>>({});
+    // use the screenNodes as the initial positions managing the state of the nodes
+    // this is updated using the onNodesPositioned
+    const onResizeNode = useCallback<NodeProps["onResizeNode"]>((name, size, expanded) => {
+        if (expanded)
+            setNodeExpandedSizes((oldSizes) => {
+                // null means remove override
+                if (!oldSizes[name] || oldSizes[name]?.width !== size.width || oldSizes[name]?.height !== size.height) {
+                 //   console.log(`RESIZING ${name} ${size.width},${size.height} ${expanded}`);
+                    return { ...oldSizes, [name]: size };
+                }
+                return oldSizes;
+            });
+        if (!expanded)
+            setNodeCollapsedSizes((oldSizes) => {
+                if (!oldSizes[name] || oldSizes[name]?.width !== size.width || oldSizes[name]?.height !== size.height) {
+//                    console.log(`RESIZING ${name} ${size.width},${size.height}`);
+                    return { ...oldSizes, [name]: size };
+                }
+                return oldSizes;
+            });
+    }, []);
+    const getNodeSize = useCallback(
+        (name: string, expanded: boolean) =>
+            (expanded ? nodeExpandedSizes[name] : nodeCollapseSizes[name]) ?? {
+                width: defaultWidth,
+                height: defaultHeight,
+            },
+        [defaultHeight, defaultWidth, nodeCollapseSizes, nodeExpandedSizes]
+    );
+    return [getNodeSize, onResizeNode];
+}
+
+export function useNodeText(
+    name:string,
+    label: string,
+    size: Size,
+    isExpanded: boolean,
+    textSize: number,
+    defaultHeight: number,
+    onResizeNode: NodeProps["onResizeNode"]
+) {
+    const textProps = useText({
+        children: label,
+        textAnchor: "middle",
+        verticalAnchor: "middle",
+        x: 0,
+        y: 0,
+        width: size.width - textSize * 4,
+        height: size.height,
+        fontSize: textSize,
+        fontWeight: "bold",
+    });
+    useEffect(() => {
+        if (isExpanded) return;
+        const estimatedHeight = (textProps.wordsByLines.length + 1.5) * textSize;
+        if (estimatedHeight > Math.max(size.height, defaultHeight)) {
+            onResizeNode(
+                name,
+                {
+                    width: size.width,
+                    height: estimatedHeight * 1.1,
+                },
+                false
+            );
+        }
+    }, [
+        defaultHeight,
+        isExpanded,
+        name,
+        onResizeNode,
+        size.height,
+        size.width,
+        textProps.wordsByLines.length,
+        textSize,
+    ]);
 }
 
 export function useExpandToggle(nodes: SimpleNode[]): [string[], Required<ExpandableGraphProps>["onExpandToggleNode"]] {
@@ -157,8 +243,6 @@ export function useHoverMotion2<T extends SVGElement = SVGGElement>(): [
     const onMouseLeave = useCallback(() => setHover(false), []);
     return [hover, { onMouseEnter, onMouseLeave }];
 }
-
-
 
 export function useHover<T extends SVGElement = SVGGElement>(): [
     boolean,

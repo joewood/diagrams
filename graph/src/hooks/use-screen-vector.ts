@@ -58,13 +58,9 @@ function getScreenPosNode(
     return screenPosition;
 }
 
-function useNodeDirections(
-    positionedNodes: PositionedNode[],
-    screenRatioX: number,
-    sizeOverrides: Record<string, Size>
-) {
+function useNodeDirections(positionedNodes: PositionedNode[], screenRatioX: number) {
     return useMemo(() => {
-        const getNodeSize = (node: PositionedNode) => sizeOverrides[node.name] ?? node.size;
+        const getNodeSize = (node: PositionedNode) => node.size;
         const allPos = positionedNodes
             .flatMap((originNode) =>
                 positionedNodes.map((testNode) => ({
@@ -88,30 +84,24 @@ function useNodeDirections(
                 : allPos.map((p) => ({ ...p, vy: 0 }));
         }
         return allPos;
-    }, [positionedNodes, screenRatioX, sizeOverrides]);
+    }, [positionedNodes, screenRatioX]);
 }
 
-
 export function useScreenNodesVectorMethod(
-    nodeDict: Record<string,PositionedNode>,
     screenPosition: Point,
-    screenSize: Size,
     positionedNodes: PositionedNode[],
-    sizeOverrides: Record<string, Size>,
     nodeMargin: number,
     titlePadding: number
 ): [ScreenPositionedNode[], Size] {
-    const screenRatio = unitVector(screenSize.width, screenSize.height);
-    const nodeDirections = useNodeDirections(positionedNodes, screenRatio.x, sizeOverrides);
-    const blend = useColorModeValue("white", "black");
+    const screenRatio = unitVector(100, 100);
+    const nodeDirections = useNodeDirections(positionedNodes, screenRatio.x);
     const possDict = useMemo<Record<string, Point & Size>>(() => {
         if (positionedNodes.length === 0) return {}; //{ width: containerPadding * 2, height: containerPadding * 2 }];
-        const getNodeSize = (node: PositionedNode) => sizeOverrides[node.name] ?? node.size;
         const screenPositioned: Record<string, Point & Size> = {};
         const screenPositions: (Point & Size)[] = [];
         const firstNode = getScreenPosNode(
             { x: 0, y: 0, width: nodeMargin, height: nodeMargin },
-            { ...nodeDirections[0].origin, size: getNodeSize(nodeDirections[0].origin) },
+            { ...nodeDirections[0].origin },
             1,
             1,
             screenPositions,
@@ -125,7 +115,7 @@ export function useScreenNodesVectorMethod(
                 if (!screenPositioned[nodeDir.test.name]) {
                     const newPos = getScreenPosNode(
                         screenPositioned[nodeDir.origin.name],
-                        { ...nodeDir.test, size: getNodeSize(nodeDir.test) },
+                        { ...nodeDir.test },
                         nodeDir.vx * screenRatio.x,
                         nodeDir.vy * screenRatio.y,
                         screenPositions,
@@ -138,7 +128,7 @@ export function useScreenNodesVectorMethod(
             }
         }
         return screenPositioned;
-    }, [nodeMargin, nodeDirections, positionedNodes.length, screenRatio.x, screenRatio.y, sizeOverrides]);
+    }, [positionedNodes.length, nodeMargin, nodeDirections, screenRatio.x, screenRatio.y]);
 
     const [screenPositions, newScreenSize] = useMemo(() => {
         const poss = Object.values(possDict);

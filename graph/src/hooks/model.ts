@@ -14,10 +14,8 @@ export interface Point {
 export interface SimpleNode {
     /** Must be unique */
     name: string;
-    /** hinted start position */
-    positionHint?: Point;
+    label?: string;
     /** non-default size of node */
-    size?: Size;
     color?: string; // if not specified then a color palette will be used
     /** Name of parent node if hierarchical */
     parent: string | null;
@@ -27,7 +25,6 @@ export interface PositionedNode extends SimpleNode {
     virtualPos: Point;
     body: Body;
     size: Size;
-    // initialPosition?: Point;
     initialSize?: Size;
     parentVirtualPosition: Point;
 }

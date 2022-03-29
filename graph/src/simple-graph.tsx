@@ -31,8 +31,8 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
     const nodesDict = useMemo(() => keyBy(defaultSimpleNodes, (n) => n.name), [defaultSimpleNodes]);
     // Resize Demand - change the state
     const [graphSize, setGraphSize] = useState<Size | undefined>();
-    const onResizeNeeded = useCallback<MiniGraphProps["onResizeNeeded"]>((_name, { suggestedSize }) => {
-        setGraphSize(suggestedSize);
+    const onResizeNeeded = useCallback<MiniGraphProps["onResizeNode"]>((_name, size) => {
+        setGraphSize(size);
     }, []);
     useEffect(() => {
         setGraphSize((oldGraphSize) => (!oldGraphSize ? defaultContainerSize : oldGraphSize));
@@ -51,7 +51,7 @@ export const SimpleGraph: FC<SimpleGraphProps> = ({
                         allRoutedSimpleEdges={simpleEdges}
                         onSelectNode={onSelectNode}
                         selectedNodes={selectedNodes ? selectedNodes : null}
-                        onResizeNeeded={onResizeNeeded}
+                        onResizeNode={onResizeNeeded}
                         expanded={[]}
                         screenSize={graphSize}
                         screenPosition={zeroPoint}

@@ -20,7 +20,7 @@ export const SvgContainer: FC<Props> = ({ children, nodeMargin, screenSize, defs
     return (
         <motion.svg
             animate={{ width: screenSize?.width ?? "100%", height: screenSize?.height ?? "100%" }}
-            style={{ margin: "auto" }}
+            style={{ margin: "auto", }}
             transition={transition}
         >
             <defs>
