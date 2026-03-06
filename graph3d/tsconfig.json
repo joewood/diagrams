@@ -1,5 +1,5 @@
 {
-    "extends": "../../base",
+    "extends": "../base",
     "include": ["src/**/*"],
     "compilerOptions": {
         "outDir": "lib/",

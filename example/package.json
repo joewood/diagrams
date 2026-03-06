@@ -4,16 +4,17 @@
     "private": true,
     "homepage": ".",
     "devDependencies": {
-        "@types/dom-mediacapture-record": "^1.0.3",
+        "@types/dom-mediacapture-record": "^1.0.22",
         "@types/lodash": "latest",
         "@types/node": "latest",
-        "@types/react": "latest",
-        "@types/react-dom": "latest",
+        "@types/react": "^17.0.91",
+        "@types/react-dom": "^17.0.26",
         "gh-pages": "^3",
         "react-scripts": "^5"
     },
     "dependencies": {
         "@chakra-ui/react": "^1",
+        "@chakra-ui/system": "^1.12.1",
         "@chakra-ui/theme": "^1",
         "@chakra-ui/theme-tools": "^1",
         "@diagrams/graph": "*",

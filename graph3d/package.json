@@ -10,19 +10,20 @@
         "@types/node": "latest",
         "@types/react": "^17.0",
         "@types/react-dom": "^17.0",
-        "@types/three": "latest"
+        "@types/three": "^0.137.0",
+        "typescript": "latest"
     },
     "dependencies": {
-        "@diagrams/three-utils": "*",
-        "@react-three/drei": "latest",
-        "@visx/text": "^2.3.0",
-        "framer-motion": "^5.5.5",
+        "@diagrams/three-utils": "file:../three-utils",
+        "@react-three/drei": "^7.27.5",
+        "@visx/text": "^2.17.0",
+        "framer-motion": "^5.6.0",
         "lodash-es": "latest",
-        "ngraph.forcelayout": "^3.2.0",
+        "ngraph.forcelayout": "^3.3.1",
         "ngraph.graph": "^19.1.0"
     },
     "peerDependencies": {
-        "@react-three/fiber": "*",
+        "@react-three/fiber": "^7.0.29",
         "react": "^17.0.2",
         "react-dom": "^17.0.2",
         "three": "*"
@@ -30,7 +31,7 @@
     "scripts": {
         "start": "tsc -p . --watch",
         "clean": "rm -rf lib",
-        "build": "tsx -p ."
+        "build": "tsc -p ."
     },
     "eslintConfig": {
         "extends": "react-app"
