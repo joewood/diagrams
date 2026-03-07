@@ -4,13 +4,14 @@
     "private": true,
     "homepage": ".",
     "devDependencies": {
+        "@vitejs/plugin-react": "^5.0.0",
         "@types/dom-mediacapture-record": "^1.0.22",
         "@types/lodash": "latest",
         "@types/node": "latest",
         "@types/react": "^17.0.91",
         "@types/react-dom": "^17.0.26",
-        "gh-pages": "^3",
-        "react-scripts": "^5"
+        "gh-pages": "^6.3.0",
+        "vite": "^7.1.0"
     },
     "dependencies": {
         "@chakra-ui/react": "^1",
@@ -31,28 +32,12 @@
     "scripts": {
         "predeploy": "npm run build",
         "deploy": "gh-pages -d build -r https://github.com/joewood/diagrams",
-        "start": "react-scripts start",
-        "build": "react-scripts build",
-        "test": "react-scripts test",
-        "eject": "react-scripts eject"
-    },
-    "eslintConfig": {
-        "extends": "react-app"
+        "start": "vite",
+        "build": "vite build --outDir build",
+        "preview": "vite preview"
     },
     "prettier": {
         "tabWidth": 4,
         "printWidth": 120
-    },
-    "browserslist": {
-        "production": [
-            ">0.2%",
-            "not dead",
-            "not op_mini all"
-        ],
-        "development": [
-            "last 1 chrome version",
-            "last 1 firefox version",
-            "last 1 safari version"
-        ]
     }
 }

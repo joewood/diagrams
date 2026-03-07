@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import { ExpandableGraph, GraphOptions, useExpandToggle, useFilterEdges, useSelectNodes } from "@diagrams/graph";
-import { useDefaultOptions } from "@diagrams/graph/lib/use-ngraph";
+import { useDefaultOptions } from "@diagrams/graph";
 import * as React from "react";
 import { FC } from "react";
 import { edges, nodesL3 } from "./data";
