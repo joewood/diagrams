@@ -22,7 +22,7 @@
         "@diagrams/sidebar": "*",
         "@emotion/react": "^11",
         "@emotion/styled": "^11",
-        "framer-motion": "^6",
+        "framer-motion": "^12",
         "lodash-es": "latest",
         "react": "^17",
         "react-dom": "^17",
