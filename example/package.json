@@ -14,7 +14,7 @@
         "vite": "^7.1.0"
     },
     "dependencies": {
-        "@chakra-ui/react": "^1",
+        "@chakra-ui/react": "^3",
         "@chakra-ui/system": "^1.12.1",
         "@chakra-ui/theme": "^1",
         "@chakra-ui/theme-tools": "^1",
