@@ -8,7 +8,7 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "devDependencies": {
-        "@types/chroma-js": "^2.4.5",
+        "@types/chroma-js": "^3.1.2",
         "@types/lodash": "latest",
         "@types/node": "latest",
         "@types/react": "^17.0.91",
@@ -17,7 +17,7 @@
     "dependencies": {
         "@chakra-ui/icons": "^1",
         "@chakra-ui/system": "^1.12.1",
-        "chroma-js": "^2.6.0",
+        "chroma-js": "^3.2.0",
         "lodash-es": "latest"
     },
     "peerDependencies": {

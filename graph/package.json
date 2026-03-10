@@ -7,7 +7,7 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "devDependencies": {
-        "@types/chroma-js": "^2",
+        "@types/chroma-js": "^3",
         "@types/lodash": "latest",
         "@types/node": "latest",
         "@types/react": "^17.0.91",
