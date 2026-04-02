@@ -8,15 +8,15 @@
     "types": "lib/index.d.ts",
     "devDependencies": {
         "@types/chroma-js": "^2",
-        "@types/lodash": "latest",
-        "@types/node": "latest",
+        "@types/lodash": "*",
+        "@types/node": "*",
         "@types/react": "^17.0.91",
         "@types/react-dom": "^17.0.26"
     },
     "dependencies": {
         "@visx/text": "^3.12.0",
         "chroma-js": "^3.2.0",
-        "lodash-es": "latest",
+        "lodash-es": "^4.18.1",
         "ngraph.forcelayout": "^3.3.1",
         "ngraph.graph": "^20.1.2"
     },

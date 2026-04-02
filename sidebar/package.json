@@ -9,8 +9,8 @@
     "types": "lib/index.d.ts",
     "devDependencies": {
         "@types/chroma-js": "^2.4.5",
-        "@types/lodash": "latest",
-        "@types/node": "latest",
+        "@types/lodash": "*",
+        "@types/node": "*",
         "@types/react": "^17.0.91",
         "@types/react-dom": "^17.0.26"
     },
@@ -18,16 +18,16 @@
         "@chakra-ui/icons": "^1",
         "@chakra-ui/system": "^1.12.1",
         "chroma-js": "^2.6.0",
-        "lodash-es": "latest"
+        "lodash-es": "^4.18.1"
     },
     "peerDependencies": {
-        "react": "^17",
         "@chakra-ui/react": "^1",
-        "@emotion/react": "^11",
-        "@emotion/styled": "^11",
         "@chakra-ui/theme": "^1",
         "@chakra-ui/theme-tools": "^1",
+        "@emotion/react": "^11",
+        "@emotion/styled": "^11",
         "framer-motion": "^6",
+        "react": "^17",
         "react-dom": "^17"
     },
     "scripts": {
